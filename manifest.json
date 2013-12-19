@@ -1,0 +1,28 @@
+{
+  "name": "Real-Time Tab Sync",
+  "version": "1.0.1",
+  "manifest_version": 2,
+  "description": "Keeps the same tabs on all your machines. Tab changes are applied in real time on all of your devices.",
+  "icons": {
+	"16": "icon16.png",
+	"48": "icon48.png",
+	"128": "icon128.png"
+  },
+  "browser_action": {
+    "default_icon": {
+	  "19": "icon19grey.png",
+      	  "38": "icon38grey.png" 
+    },
+    "default_title": "Default",
+	"default_popup": "popup.html"
+  },
+  "background": {
+	"scripts": ["background.js"],
+	"persistent": true
+  },
+  "permissions": [
+	"storage",
+	"tabs",
+	"pushMessaging"
+  ]
+}
