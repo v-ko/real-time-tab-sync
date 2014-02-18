@@ -19,5 +19,3 @@ Details:
 - New tabs (chrome://newtab) and developer tools (chrome://developer-tools/*) are unaffected by the extension for fluency .
 
 - On sync (if a change is detected on another machine) the extension just compares two lists - URLs of all local tabs , and URLs that are synced on the last remote tab change. Differences are applied to the local tabs and that's it . That has its limitations , but the biggest advantages are simplicity and speed (along with the aforementioned "feature" (for me at least) that the tabs can be in different windows with different sizes on separate devices) .
-
--For developers that want to check out the code - yes , it's open source, and you can check it out at GitHub : https://github.com/petko10/real-time-tab-sync
