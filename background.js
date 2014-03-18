@@ -29,6 +29,7 @@
 //Update
 //On-off from the browserAction
 //Closing the normal window and leaving the dev-tools open (to test that tabs are not lost)
+//With and without preserving the browser session (the integrated Chrome option)
 
 //========Global variables===========
 var time_of_start=Date.now();//for testing
