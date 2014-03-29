@@ -24,6 +24,20 @@
 //In order not to lose information when starting the extension or when the time stamps don't match (we've been offline for some time) 
 //the tabs get merged, instead of replaced with the stored URLs 
 
+
+/////////////////////////////////////////////////////////////////////////
+
+//Conditions (flags) needed for the sync functions to execute correctly (unfinished):
+
+//>sync.storage.'power'==true
+//>>Flag: syncingIsActive
+//>>Event handler:
+
+
+
+
+
+
 //Test cases:
 //Fresh install
 //Update
@@ -32,75 +46,38 @@
 //With and without preserving the browser session (the integrated Chrome option)
 
 //========Global variables===========
-var time_of_start=Date.now();//for testing
 var syncingIsStarted=false; //indicates if the syncing is started internally (listeners are on)
 var syncingIsActive=false; //indicates if the user has enabled syncing ('power' in storage.local is true)
 var listenersAreAdded=false; //an indicator used by the last two functions (handling listeners) so they don't register duplicate listeners
-
 var normalWindowPresent=false;
+var inSyncFunction=false;//indicates if one of the two (from/to sync storage) functions is executng right now
+
+var time_of_start=Date.now();//for testing
+
 var allTabsHaveCompletedLoading=true;
 var browserActionIcon="none";
 
-var inSyncFunction=false;//indicates if one of the two (from/to sync storage) functions is executng right now
+
 var inUpdateIfAllTabsAreCompleteFunc=false;//another indicator to ensure only one instance of a function is running
 
-var start_of_current_session = Date.UTC();
-var time_of_last_sync_from_current_session=start_of_current_session;
+var start_of_current_session = Date.UTC(); //those are for a mechanism to avoid syncing to some retarded syncStorageChanged sigals
+var time_of_last_sync_from_current_session = start_of_current_session;
 
 //========Program start==============
 
 //-------Register the events that will trigger the startUp() function--------
-chrome.runtime.onStartup.addListener( function() {
-    console.log("[chrome.runtime.onStartup]");
-	normalWindowPresent=true; //the startup event implies it
-	updateSyncState();
-});
-chrome.runtime.onInstalled.addListener( function( details ) {
-    console.log("[chrome.runtime.onInstalled]"+"Reason:"+details.reason);
-    normalWindowPresent=true;
-	updateSyncState();
-});
+chrome.runtime.onStartup.addListener( handleOnStartupEvent );
+chrome.runtime.onInstalled.addListener( handleOnInstalledEvent );
+
 
 //-------Register the events for the window changes-------------
 //So that the sync is active only when there are normal windows active (other windows might be apps or the dev tools)
-chrome.windows.onCreated.addListener( function(window){
-    console.log("[chrome.windows.onCreated]Window type: "+window.type);
-
-	if(window.type==="normal"){
-		normalWindowPresent=true;
-		updateSyncState();
-	}
-});
-chrome.windows.onRemoved.addListener( function(){
-    console.log("[chrome.windows.onRemoved]");
-	
-	chrome.windows.getAll( {populate : false} , function(windows){	
-		normalWindowPresent=false; //assume there are no normal windows now
-		
-		for(var w=0;w<windows.length;w++){
-			if(windows[w].type==="normal"){
-				normalWindowPresent=true; //on a normal window - update the flag
-			}
-		}
-		updateSyncState();
-	});
-});
+chrome.windows.onCreated.addListener( handleOnWindowCreated );
+chrome.windows.onRemoved.addListener( handleOnWindowRemoved );
 
 //-----------Handling the messages from the poppup button (on-off switch)----------
-chrome.extension.onMessage.addListener( function( message ) {
-    console.log("[chrome.extension.onMessage]","Message:"+message)
+chrome.extension.onMessage.addListener( handleOnMessage )
 
-	if( message === "start" ) {
-		activateSyncing(function(){
-			updateSyncState();	
-		});
-		
-	}else if( message === "stop" ) {
-		deactivateSyncing(function(){
-			updateSyncState();		
-		});
-	}
-});
 
 //Check if the syncing is turned on by the user
 chrome.storage.local.get( "power", function( data ) {
@@ -122,6 +99,88 @@ chrome.storage.local.get( "power", function( data ) {
 });
 
 //=========Defining the functions=================
+
+//
+//Signal handlers
+/////////////////////////////////////////////////
+
+function handleOnWindowCreated(window)
+{
+    console.log("[chrome.windows.onCreated]Window type: "+window.type);
+
+    if(window.type==="normal"){
+        normalWindowPresent=true;
+        updateSyncState();
+    }
+}
+function handleOnWindowRemoved(){
+    console.log("[chrome.windows.onRemoved]");
+
+    chrome.windows.getAll( {populate : false} , function(windows){
+        normalWindowPresent=false; //assume there are no normal windows now
+
+        for(var w=0;w<windows.length;w++){
+            if(windows[w].type==="normal"){
+                normalWindowPresent=true; //on a normal window - update the flag
+            }
+        }
+        updateSyncState();
+    });
+}
+
+function handleOnMessage( message )
+{
+    console.log("[chrome.extension.onMessage]","Message:"+message)
+
+    if( message === "start" ) {
+        activateSyncing(function(){
+            updateSyncState();
+        });
+
+    }else if( message === "stop" ) {
+        deactivateSyncing(function(){
+            updateSyncState();
+        });
+    }
+}
+
+function handleOnStartupEvent() { //should be with callback
+    console.log("[chrome.runtime.onStartup]");
+
+    windowIsPresent( function(window_is_present){
+        if(window_is_present){
+            normalWindowPresent=true;
+            updateSyncState();
+        }
+    });
+}
+function handleOnInstalledEvent( details )  { //should be with callback
+    console.log("[chrome.runtime.onInstalled]"+"Reason:"+details.reason);
+
+    windowIsPresent( function(window_is_present){
+        if(window_is_present){
+            normalWindowPresent=true;
+            updateSyncState();
+        }
+    });
+}
+
+function windowIsPresent(callback)
+{
+    var window_is_present = false;
+
+    chrome.windows.getAll( {populate : false} , function(windows){
+
+        console.log("[windowIsPresent]Windows returned:"+windows);
+
+        if(windows){
+            if(windows.length>0){
+                window_is_present=true;
+            }
+        }
+        if( callback && typeof( callback ) === "function" ) { callback(window_is_present); }
+    });
+}
 
 //
 // If the appropriate flags are up(/down) - start syncing. Otherwise stop syncing (internally).
@@ -193,7 +252,7 @@ function mergeTabsFromSync( callback ){
             });
         }else{ //If there is a 'syncTabs' key
             updateTabsFromStringList( returnVal.syncTabs.slice() ,true ,function(){ //merge (and not replace that's what the 'true' is for merging) from the syncTabs list
-                updateStorageFromTabs_directly(function(){ //call an update
+                updateStorageFromTabs_directly(function(){ //call an update (add merged local tabs)
                     inSyncFunction=false;
                     updateBrowserAction();
                     if( callback && typeof( callback ) === "function" ) { callback(); }
@@ -218,8 +277,8 @@ function updateTabsFromStorage(changes,areaname,callback) {
             return;
         }
 
-        console.log("[updateTabsFromStorage]changes.SyncTabs:"+changes.SyncTabs+"(there should be changes, else func returns)");
         if(!changes.syncTabs) {//skip if there's no item syncTabs in the changes
+            console.log("[updateTabsFromStorage] !changes.syncTabs==true .Returning.");
             if( callback && typeof( callback ) === "function" ) { callback(); }
             return;
         }
@@ -231,6 +290,8 @@ function updateTabsFromStorage(changes,areaname,callback) {
             if( callback && typeof( callback ) === "function" ) { callback(); }
             return;
         }
+
+        console.log("[updateTabsFromStorage]SyncTabs:"+syncTabs+"("+syncTabs.length+")");
 
         if(!inSyncFunction){
             inSyncFunction=true;
