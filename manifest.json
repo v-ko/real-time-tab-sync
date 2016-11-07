@@ -22,7 +22,6 @@
   },
   "permissions": [
 	"storage",
-	"tabs",
-	"pushMessaging"
+	"tabs"
   ]
 }
