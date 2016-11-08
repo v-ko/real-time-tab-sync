@@ -8,7 +8,7 @@
   Tips about the code :
   
   - I put debug(s) in the start and end of functions,
-  because most of the stuff is async and bugs emerge when some func-s run together
+  because most of the stuff is async and bugs emerge when some functions run together
   
   - Do not believe the console log about objects logged before the dev-tools are opened 
   (they could be reduced to Obejct[0] , while at runtime they were correct)
@@ -63,7 +63,7 @@ var listenersAreAdded   = false;  // an indicator used by the last two functions
 var normalWindowPresent = false;  
 var inSyncFunction      = false;  // indicates if one of the two (from/to sync storage) functions is executng right now
 var browserActionIcon   = "none";
-var debuggindMode       = false;
+var debuggingMode       = false;
 
 var time_of_start            = Date.now(); // for testing
 var start_of_current_session = Date.UTC(); //those are for a mechanism to avoid syncing to some late syncStorageChanged sigals
@@ -120,8 +120,7 @@ chrome.storage.local.get( "power", function( data ) {
 // Signal handlers
 /////////////////////////////////////////////////
 
-function handleOnWindowCreated( window )
-{
+function handleOnWindowCreated( window ){
     debug("[chrome.windows.onCreated] Window type: "+window.type);
 
     if( window.type === "normal" ){
@@ -145,8 +144,7 @@ function handleOnWindowRemoved(){
     });
 }
 
-function handleOnMessage( message )
-{
+function handleOnMessage( message ){
     debug("[chrome.extension.onMessage] Message: "+message);
 
     if( message === "start" ) {
@@ -183,8 +181,7 @@ function handleOnInstalledEvent( details )  { //should be with callback
     });
 }
 
-function windowIsPresent( callback )
-{
+function windowIsPresent( callback ){
     var window_is_present = false;
 
     chrome.windows.getAll( {populate : false} , function( windows ){
@@ -219,19 +216,17 @@ function updateSyncState( callback ) {
 	}
 
 	//Check for a normal window
-        debug("[updateSyncState] normalWindowPresent: "+normalWindowPresent+" (should be true)");
-        debug("[updateSyncState] inSyncFunction: "+inSyncFunction+" (should be false)");
-        debug("[updateSyncState] syncingIsStarted: "+syncingIsStarted+" (should be true)";
-    }
-    
+    debug("[updateSyncState] normalWindowPresent: "+normalWindowPresent+" (should be true)");
+    debug("[updateSyncState] inSyncFunction: "+inSyncFunction+" (should be false)");
+    debug("[updateSyncState] syncingIsStarted: "+syncingIsStarted+" (should be true)");
+        
 	if( normalWindowPresent === false ){
-		if( syncingIsStarted ){
+	    if( syncingIsStarted ){
 			stopSyncing();
 		}
 		
 		if( callback && typeof( callback ) === "function" ) { callback(); }
         //return;
-		
 	}else if( inSyncFunction ){ //Check for a lock by one of the sync functions - unlikely but might mess up things
 		if( callback && typeof( callback ) === "function" ) { callback(); }
 		
@@ -251,7 +246,7 @@ function updateSyncState( callback ) {
 
     if( callback && typeof( callback ) === "function" ) { callback(); }
 	
-}//end updateSyncState
+}
 
 function mergeTabsFromSync( callback ){
     debug("[mergeTabsFromSync()]");
@@ -343,7 +338,7 @@ function updateTabsFromStorage( changes, areaname, callback ) {
                 });
             });
         }else{ //If another sync function is running
-            debug("[updateTabsFromStorage] inSyncFunction==true . Returning.");
+            debug("[updateTabsFromStorage] inSyncFunction==true. Returning.");
             
             if( callback && typeof( callback ) === "function" ) { callback(); }
             return;
@@ -568,6 +563,7 @@ function handleTabCreatedEvent( tab ){
     debug("[handleTabCreatedEvent] tab.id: "+tab.id);
 	updateIfAllTabsAreComplete( tab.id );
 }
+
 function handleTabUpdatedEvent( tabId, changes ){
     debug("[handleTabUpdatedEvent] tabId: "+tabId+", changes.status: "+changes.status);
 
@@ -577,10 +573,12 @@ function handleTabUpdatedEvent( tabId, changes ){
 		allTabsHaveCompletedLoading = false;
 	}
 }
+
 function handleTabRemovedEvent( tabId ){
     debug("[handleTabRemovedEvent]tabId="+tabId);
 	updateIfAllTabsAreComplete( tabId );
 }
+
 function updateIfAllTabsAreComplete( tabIdToIgnore ){
     debug("[updateIfAllTabsAreComplete] tabIdToIgnore: "+tabIdToIgnore);
 
@@ -718,7 +716,7 @@ function removeListeners(){
 }
 
 //
-// Recursive function to make 'i' iterations retrieving the 'syncTabs' from storage.sync (for testing)
+// Debugging and testing functions
 /////////////////////////////////////
 function printSyncTabs( i, callback ){
 	chrome.storage.sync.get( 'syncTabs', function( tt ){
