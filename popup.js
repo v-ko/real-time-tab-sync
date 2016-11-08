@@ -5,9 +5,9 @@
  *
 */
 
-window.onload = function() {
+window.onload = function(){
 	// Get the on/off setting and adjust the text link
-	chrome.storage.local.get( "power", function( data ) {
+	chrome.storage.local.get( "power", function( data ){
 		var power = true;
 		
 		// The setting is set in background.js
@@ -24,6 +24,23 @@ window.onload = function() {
 		// Set action to take when link is clicked
 		powerButton.onclick = powerButtonOnClick;
 	});
+	
+	chrome.storage.local.get( "syncAll", function( data ){
+	    var syncAll = true;
+	    if( data && data.syncAll === false ){
+	        syncAll = false;
+	    }
+	    
+		var tabsButton = document.getElementById("pinned");
+		
+		if( syncAll ){
+		    tabsButton.innerHTML = "Sync pinned tabs";
+		}
+		
+		tabsButton.onclick = tabsButtonOnClick;
+	});
+	
+	
 };
 
 //
@@ -31,7 +48,7 @@ window.onload = function() {
 // it will also change the link text
 ///////////////////////////////////////
 function powerButtonOnClick() {
-	chrome.storage.local.get( "power", function( data ) {
+	chrome.storage.local.get( "power", function( data ){
 		var power = true;
 		if( data && data.power === false ) {
 			power = false;
@@ -48,4 +65,24 @@ function powerButtonOnClick() {
 		}
 	});
 }
+
+function tabsButtonOnClick() {
+    chrome.storage.local.get( "syncAll", function( data ){
+        var syncAll = true;
+        if( data && data.syncAll === false ){
+            syncAll = false;
+        }
+        
+        var tabsButton  = document.getElementById("pinned");
+        
+        if( syncAll ){
+            chrome.extension.sendMessage("syncAll");
+            tabsButton.innerHTML = "Sync all tabs";
+        }else{
+            chrome.extension.sendMessage("syncPinned");
+            tabsButton.innerHTML = "Sync pinned tabs";
+        } 
+    });
+}
+
 

@@ -147,13 +147,22 @@ function handleOnWindowRemoved(){
 function handleOnMessage( message ){
     debug("[chrome.extension.onMessage] Message: "+message);
 
-    if( message === "start" ) {
+    if( message === "start" ){
         activateSyncing(function(){
             updateSyncState();
         });
 
-    }else if( message === "stop" ) {
+    }else if( message === "stop" ){
         deactivateSyncing(function(){
+            updateSyncState();
+        });
+        
+    }else if( message === "syncTabs" ){
+        syncAllTabs(function(){
+            updateSyncState();
+        });
+    }else if( message === "syncPinned" ){
+        syncPinnedTabs(function(){
             updateSyncState();
         });
     }
@@ -497,10 +506,14 @@ function diffCurrentToStoredTabs( syncTabs, callback ){
 	var missingTabs = new Array();
 	var currentTabs2 = new Array();
 	var tabs_count;
+	var query_obj = {};
+	if( !syncAllTabs ){
+	    query_obj = {"pinned": true};
+	}
 		
 	// Get current tabs
-	chrome.tabs.query( {} , function (currentTabs) { //query with no specifier so we get all tabs
-        debug("[diffCurrentToStoredTabs] chrome.tabs.query({}) returned: "+currentTabs);
+	chrome.tabs.query( query_obj , function (currentTabs) { //query_obj to choose all tabs or only pinned tabs
+        debug("[diffCurrentToStoredTabs] chrome.tabs.query(query_obj) returned: "+currentTabs);
         
 		if( !currentTabs ){
 			if( callback && typeof( callback ) === "function" ) { callback(); }
@@ -589,7 +602,12 @@ function updateIfAllTabsAreComplete( tabIdToIgnore ){
         inUpdateIfAllTabsAreCompleteFunc = true;
 	}
 	
-	chrome.tabs.query( {}, function( currentTabs ) { //query with no specifier so we get all tabs
+	var query_obj = {}
+	if( !syncAllTabs ){
+	    query_obj = {"pinned": true};
+	}
+	
+	chrome.tabs.query( query_obj, function( currentTabs ) { //query_obj filters if we want all tabs or only pinned tabs
 		if( !currentTabs ){
             debug("[updateIfAllTabsAreComplete] currentTabs: false. Returning.");
             
@@ -623,7 +641,7 @@ function updateIfAllTabsAreComplete( tabIdToIgnore ){
 function activateSyncing( callback ){ 
     debug("[activateSyncing]");
 	
-	chrome.storage.local.set( { "power": true }, function() {
+	chrome.storage.local.set( { "power": true }, function(){
 		syncingIsActive = true;
 		updateBrowserAction();
 		if( callback && typeof( callback ) === "function" ) { callback(); }
@@ -633,12 +651,32 @@ function activateSyncing( callback ){
 function deactivateSyncing( callback ){
     debug("[deactivateSyncing]");
 	
-	chrome.storage.local.set( { "power": false }, function() {
+	chrome.storage.local.set( { "power": false }, function(){
 		syncingIsActive = false;
 		updateBrowserAction();
 		if( callback && typeof( callback ) === "function" ) { callback(); }
 		return;
 	});
+}
+
+function syncAllTabs( callback ){
+    debug("[syncAllTabs]");
+    
+    chrome.storage.local.set( { "syncAllTabs": true }, function(){
+        syncAllTabs = true;
+        if( callback && typeof( callback ) === "function" ) { callback(); }
+        return; 
+    });
+}
+
+function syncPinnedTabs( callback ){
+    debug("[syncPinnedTabs]");
+    
+    chrome.storage.local.set( { "syncAllTabs": false }, function(){
+        syncAllTabs = false;
+        if( callback && typeof( callback ) === "function" ) { callback(); }
+        return; 
+    });
 }
 
 //
