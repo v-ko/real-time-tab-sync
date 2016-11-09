@@ -512,7 +512,7 @@ function diffCurrentToStoredTabs( syncTabs, callback ){
 	}
 		
 	// Get current tabs
-	chrome.tabs.query( query_obj , function (currentTabs) { //query_obj to choose all tabs or only pinned tabs
+	chrome.tabs.query( query_obj , function (currentTabs) { //query_obj to choose all tabs or only pinned
         debug("[diffCurrentToStoredTabs] chrome.tabs.query(query_obj) returned: "+currentTabs);
         
 		if( !currentTabs ){
@@ -662,7 +662,7 @@ function deactivateSyncing( callback ){
 function syncAllTabs( callback ){
     debug("[syncAllTabs]");
     
-    chrome.storage.local.set( { "syncAllTabs": true }, function(){
+    chrome.storage.sync.set( { "syncAllTabs": true }, function(){
         syncAllTabs = true;
         if( callback && typeof( callback ) === "function" ) { callback(); }
         return; 
@@ -672,7 +672,7 @@ function syncAllTabs( callback ){
 function syncPinnedTabs( callback ){
     debug("[syncPinnedTabs]");
     
-    chrome.storage.local.set( { "syncAllTabs": false }, function(){
+    chrome.storage.sync.set( { "syncAllTabs": false }, function(){
         syncAllTabs = false;
         if( callback && typeof( callback ) === "function" ) { callback(); }
         return; 
