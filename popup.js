@@ -15,29 +15,29 @@ window.onload = function(){
 			power = false;
 		}
 
-		var powerButton = document.getElementById("power");
+		var powerToggle = document.getElementById("power");
 
 		if( power ) {
-			powerButton.innerHTML = "Turn Off";
+			powerToggle.checked = "true";
 		}
 		
 		// Set action to take when link is clicked
-		powerButton.onclick = powerButtonOnClick;
+		powerToggle.onclick = powerButtonOnClick;
 	});
 	
-	chrome.storage.local.get( "syncAll", function( data ){
+	chrome.storage.sync.get( "syncAll", function( data ){
 	    var syncAll = true;
 	    if( data && data.syncAll === false ){
 	        syncAll = false;
 	    }
 	    
-		var tabsButton = document.getElementById("pinned");
+		var tabsToggle = document.getElementById("pinned");
 		
 		if( syncAll ){
-		    tabsButton.innerHTML = "Sync pinned tabs";
+		    tabsToggle.checked = "true";
 		}
 		
-		tabsButton.onclick = tabsButtonOnClick;
+		tabsToggle.onclick = tabsButtonOnClick;
 	});
 	
 	

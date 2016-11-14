@@ -3,20 +3,99 @@
 	<title>Real-Time Tab Sync</title>
 	<style>
 	    html, body {
-	        min-width: 150px;
+	        min-width: 200px;
 	        text-align: center;
 	    }
 	    
 	    #power {
 	        margin-bottom: 5px;
 	    }
+	    
+	    .switch {
+          position: relative;
+          display: inline-block;
+          width: 60px;
+          height: 34px;
+        }
+
+        .switch input {display:none;}
+
+        .slider {
+          position: absolute;
+          cursor: pointer;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: #ccc;
+          -webkit-transition: .4s;
+          transition: .4s;
+        }
+
+        .slider:before {
+          position: absolute;
+          content: "";
+          height: 26px;
+          width: 26px;
+          left: 4px;
+          bottom: 4px;
+          background-color: white;
+          -webkit-transition: .4s;
+          transition: .4s;
+        }
+
+        input:checked + .slider {
+          background-color: #2196F3;
+        }
+
+        input:focus + .slider {
+          box-shadow: 0 0 1px #2196F3;
+        }
+
+        input:checked + .slider:before {
+          -webkit-transform: translateX(26px);
+          -ms-transform: translateX(26px);
+          transform: translateX(26px);
+        }
+
+        .slider.round {
+          border-radius: 34px;
+        }
+
+        .slider.round:before {
+          border-radius: 50%;
+        }
+
+        .vctr {
+            line-height: 34px;
+            vertical-align: top;
+        }
 	</style>
 </head>
 
 <body>
 	<div class="center">
-		<button id="power">Turn On</a>
-		<button id="pinned">Sync all tabs</a>
+	    <div class="toggle_switch">
+	        <h2>Sync toggle</h2>
+            <span class="vctr">OFF</span>
+            <label class="switch">
+              <input id="power" type="checkbox">
+              <div class="slider round"></div>
+            </label>
+            <span class="vctr">ON</span>
+        </div>
+        
+        <div style="height: 20px;"></div>
+        
+        <div class="toggle_switch">
+            <h2>Tabs to sync</h2>
+            <span class="vctr">PINNED</span>
+            <label class="switch">
+              <input id="pinned" type="checkbox">
+              <div class="slider round"></div>
+            </label>
+            <span class="vctr">ALL</span>
+        </div>
 	</div>
 
 	<script type="text/javascript" src="popup.js"></script>

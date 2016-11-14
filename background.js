@@ -2,6 +2,7 @@
 
   Real-Time Tab Sync
   Author: Petko Ditchev
+  Contributor(s): Chris de Claverie
  
   ---------------------
   
@@ -72,8 +73,6 @@ var allTabsHaveCompletedLoading      = true;
 var inUpdateIfAllTabsAreCompleteFunc = false; //another indicator to ensure only one instance of a function is running
 
 var time_of_last_sync_from_current_session = start_of_current_session;
-
-
 
 
 //========Program start==============
