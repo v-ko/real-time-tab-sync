@@ -234,7 +234,17 @@ function handleStartup() { //should be with callback
 }
 
 function handleInstalled( details )  { //should be with callback
-    debug("[chrome.runtime.onInstalled] Reason: "+details.reason);
+    debug("[chrome.runtime.onInstalled] Reason: ", details.reason);
+    chrome.storage.local.set({"syncingActive": true}, function(){
+	    syncingActive = true;
+	    updateBrowserIcon();
+	    updateSyncState();
+    });
+    
+    chrome.storage.sync.set( { "syncAll": true }, function(){
+        syncAllTabs = true;
+        updateSyncState();
+    });
 
     windowIsPresent(function( window_is_present ){
         if( window_is_present ){
@@ -322,9 +332,8 @@ function handleTabCreated( tab ){
 }
 
 function handleTabUpdated( tabId, changes, tab ){
-    debug("[handleTabUpdated] tabId: ", tabId, ", changes: ", changes, ", URL: ", tab.url);
-
 	if( changes.status === "complete" ){	
+	    debug("[handleTabUpdated] tabId: ", tabId, ", changes: ", changes, ", URL: ", tab.url);
 		updateIfAllTabsAreComplete( tabId );
 	}else{
 		allTabsHaveCompletedLoading = false;
