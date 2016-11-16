@@ -64,7 +64,7 @@ var listenersAdded   = false;  // an indicator used by the last two functions (h
 var normalWindowPresent = false;  
 var inSyncFunction      = false;  // indicates if one of the two (from/to sync storage) functions is executng right now
 var browserActionIcon   = "none";
-var debuggingMode       = false;
+var debuggingMode       = true;
 
 var time_of_start            = Date.now(); // for testing
 var start_of_current_session = Date.UTC(); //those are for a mechanism to avoid syncing to some late syncStorageChanged sigals
@@ -764,6 +764,6 @@ function printSyncTabs( i, callback ){
 
 function debug( ){
     if( debuggingMode ){
-        chrome.extension.getBackgroundPage().console.log( arguments );
+        chrome.extension.getBackgroundPage().console.log.apply( this, arguments );
     }
 }
