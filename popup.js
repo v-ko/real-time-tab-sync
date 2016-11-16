@@ -8,28 +8,28 @@
 var debuggingMode = true;
 window.onload = function(){
 	// Get the on/off setting and adjust the text link
-	chrome.storage.local.get( "power", function( data ){
-		var power = true;
+	chrome.storage.local.get( "syncingActive", function( data ){
+		var syncingActive = true;
 		
 		// The setting is set in background.js
-		if( data && data.power === false ) {
-			power = false;
+		if( data && data.syncingActive === false ) {
+			syncingActive = false;
 		}
 		
 		if( debuggingMode ){
-		    debug( "[popup] power: ", power );
+		    debug( "[popup] syncingActive: ", syncingActive );
 		}
 
-		var powerToggle = document.getElementById("power");
+		var toggle = document.getElementById("power");
 
-		if( power ) {
-			powerToggle.checked = true;
+		if( syncingActive ) {
+			toggle.checked = true;
 		}else{
-		    powerToggle.checked = false;
+		    toggle.checked = false;
 		}
 		
 		// Set action to take when link is clicked
-		powerToggle.onclick = powerButtonOnClick;
+		toggle.onclick = toggleSync;
 	});
 	
 	chrome.storage.sync.get( "syncAll", function( data ){
@@ -42,15 +42,15 @@ window.onload = function(){
 		    debug( "[popup] syncAll: ", syncAll );
 		}
 	    
-		var tabsToggle = document.getElementById("pinned");
+		var toggle = document.getElementById("pinned");
 		
 		if( syncAll ){
-		    tabsToggle.checked = true;
+		    toggle.checked = true;
 		}else{
-		    tabsToggle.checked = false;
+		    toggle.checked = false;
 		}
 		
-		tabsToggle.onclick = tabsButtonOnClick;
+		toggle.onclick = toggleTabs;
 	});
 	
 	
@@ -60,20 +60,20 @@ window.onload = function(){
 // This will send a message to background.js to turn on or off tab auto sync
 // it will also change the link text
 ///////////////////////////////////////
-function powerButtonOnClick() {
-	var powerToggle = document.getElementById("power");
+function toggleSync() {
+	var toggle = document.getElementById("power");
 	
-	if( powerToggle.checked ) {
+	if( toggle.checked ) {
 		chrome.extension.sendMessage("start");
 	} else {
 		chrome.extension.sendMessage("stop");
 	}
 }
 
-function tabsButtonOnClick() {
-    var tabsToggle  = document.getElementById("pinned");
+function toggleTabs() {
+    var toggle  = document.getElementById("pinned");
     
-    if( tabsToggle.checked ){
+    if( toggle.checked ){
         chrome.extension.sendMessage("syncAll");
     }else{
         chrome.extension.sendMessage("syncPinned");
