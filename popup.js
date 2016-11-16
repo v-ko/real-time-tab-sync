@@ -5,6 +5,7 @@
  *
 */
 
+var debuggingMode = true;
 window.onload = function(){
 	// Get the on/off setting and adjust the text link
 	chrome.storage.local.get( "power", function( data ){
@@ -14,11 +15,17 @@ window.onload = function(){
 		if( data && data.power === false ) {
 			power = false;
 		}
+		
+		if( debuggingMode ){
+		    debug( "[popup] power: ", power );
+		}
 
 		var powerToggle = document.getElementById("power");
 
 		if( power ) {
-			powerToggle.checked = "true";
+			powerToggle.checked = true;
+		}else{
+		    powerToggle.checked = false;
 		}
 		
 		// Set action to take when link is clicked
@@ -31,10 +38,16 @@ window.onload = function(){
 	        syncAll = false;
 	    }
 	    
+	    if( debuggingMode ){
+		    debug( "[popup] syncAll: ", syncAll );
+		}
+	    
 		var tabsToggle = document.getElementById("pinned");
 		
 		if( syncAll ){
-		    tabsToggle.checked = "true";
+		    tabsToggle.checked = true;
+		}else{
+		    tabsToggle.checked = false;
 		}
 		
 		tabsToggle.onclick = tabsButtonOnClick;
@@ -48,41 +61,28 @@ window.onload = function(){
 // it will also change the link text
 ///////////////////////////////////////
 function powerButtonOnClick() {
-	chrome.storage.local.get( "power", function( data ){
-		var power = true;
-		if( data && data.power === false ) {
-			power = false;
-		}
-		
-		var powerButton = document.getElementById("power");
-		
-		if( power ) {
-			chrome.extension.sendMessage("stop");
-			powerButton.innerHTML = "Turn On";
-		} else {
-			chrome.extension.sendMessage("start");
-			powerButton.innerHTML = "Turn Off";
-		}
-	});
+	var powerToggle = document.getElementById("power");
+	
+	if( powerToggle.checked ) {
+		chrome.extension.sendMessage("start");
+	} else {
+		chrome.extension.sendMessage("stop");
+	}
 }
 
 function tabsButtonOnClick() {
-    chrome.storage.local.get( "syncAll", function( data ){
-        var syncAll = true;
-        if( data && data.syncAll === false ){
-            syncAll = false;
-        }
-        
-        var tabsButton  = document.getElementById("pinned");
-        
-        if( syncAll ){
-            chrome.extension.sendMessage("syncAll");
-            tabsButton.innerHTML = "Sync all tabs";
-        }else{
-            chrome.extension.sendMessage("syncPinned");
-            tabsButton.innerHTML = "Sync pinned tabs";
-        } 
-    });
+    var tabsToggle  = document.getElementById("pinned");
+    
+    if( tabsToggle.checked ){
+        chrome.extension.sendMessage("syncAll");
+    }else{
+        chrome.extension.sendMessage("syncPinned");
+    } 
 }
 
+function debug() {
+    if( debuggingMode ){
+        chrome.extension.getBackgroundPage().console.log.apply( this, arguments );
+    }
+}
 
