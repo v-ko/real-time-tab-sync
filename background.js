@@ -73,6 +73,27 @@ var allTabsHaveCompletedLoading      = true;
 var inUpdateIfAllTabsAreCompleteFunc = false; //another indicator to ensure only one instance of a function is running
 var time_of_last_sync_from_current_session = start_of_current_session;
 
+//========Program startup==============
+// Check if the syncing is turned on by the user
+chrome.storage.local.get( "power", function( data ) {
+    debug("[chrome.storage.local.get('power')] Returned: ", data.power)
+
+	if( data.power === true ){
+		syncingActive = true;
+		updateBrowserAction();
+		updateSyncState();
+	}else if( data.power === false ) {
+		syncingActive = false;
+		updateBrowserAction();
+		updateSyncState();
+	}else{
+		activateSyncing(function(){
+			updateSyncState();
+		});
+	} 
+});
+
+
 
 //========Default event handling==============
 chrome.runtime.onStartup.addListener( handleStartup );
@@ -82,7 +103,7 @@ chrome.windows.onRemoved.addListener( handleWindowRemoved );
 chrome.extension.onMessage.addListener( handleMessage )
 
 function handleWindowCreated( window ){
-    debug("[chrome.windows.onCreated] Window type: "+window.type);
+    debug("[chrome.windows.onCreated] Window type: ", window.type);
 
     if( window.type === "normal" ){
         normalWindowPresent = true;
@@ -106,7 +127,7 @@ function handleWindowRemoved(){
 }
 
 function handleMessage( message ){
-    debug("[chrome.extension.onMessage] Message: "+message);
+    debug("[chrome.extension.onMessage] Message: ", message);
 
     if( message === "start" ){
         activateSyncing(function(){
@@ -160,31 +181,11 @@ function handleInstalled( details )  { //should be with callback
 
 
 
-// Check if the syncing is turned on by the user
-chrome.storage.local.get( "power", function( data ) {
-    debug("[chrome.storage.local.get('power')] Returned: ", data.power)
-
-	if( data.power === true ){
-		syncingActive = true;
-		updateBrowserAction();
-		updateSyncState();
-	}else if( data.power === false ) {
-		syncingActive = false;
-		updateBrowserAction();
-		updateSyncState();
-	}else{
-		activateSyncing(function(){
-			updateSyncState();
-		});
-	} 
-});
 
 
 
 
 //=========Defining the functions=================
-
-
 
 function windowIsPresent( callback ){
     var window_is_present = false;
@@ -208,7 +209,7 @@ function windowIsPresent( callback ){
 // If the appropriate flags are up(/down) - start syncing. Otherwise stop syncing (internally).
 ///////////////////////////////////////////
 function updateSyncState( callback ) {
-    debug("[updateSyncState] syncingActive: "+syncingActive+" (should be true)");
+    debug("[updateSyncState] syncingActive: ", syncingActive, " (should be true)");
     
 	if( syncingActive ){ //Listeners are always on if the user has enabled syncing
 		if( !listenersAdded ){ //if the flag is up , but the listeners are not added - do it
@@ -221,9 +222,9 @@ function updateSyncState( callback ) {
 	}
 
 	//Check for a normal window
-    debug("[updateSyncState] normalWindowPresent: "+normalWindowPresent+" (should be true)");
-    debug("[updateSyncState] inSyncFunction: "+inSyncFunction+" (should be false)");
-    debug("[updateSyncState] syncingReady: "+syncingReady+" (should be true)");
+    debug("[updateSyncState] normalWindowPresent: ", normalWindowPresent, " (should be true)");
+    debug("[updateSyncState] inSyncFunction: ", inSyncFunction, " (should be false)");
+    debug("[updateSyncState] syncingReady: ", syncingReady, " (should be true)");
         
 	if( normalWindowPresent === false ){
 	    if( syncingReady ){
@@ -257,10 +258,10 @@ function mergeTabsFromSync( callback ){
     debug("[mergeTabsFromSync()]");
 
 	chrome.storage.sync.get( 'syncTabs', function( returnVal ) { //get synced tabs
-	    debug("[mergeTabsFromSync] chrome.storage.sync.get('syncTabs') Returned: "+returnVal.syncTabs);
+	    debug("[mergeTabsFromSync] chrome.storage.sync.get('syncTabs') Returned: ", returnVal.syncTabs);
 		
         if( inSyncFunction ){
-            debug("[mergeTabsFromSync] inSyncFunction: true. Returning.")
+            debug("[mergeTabsFromSync] inSyncFunction: ", true, ". Returning.")
             return;
         }else{
             inSyncFunction = true;
@@ -293,14 +294,14 @@ function handleStorageChange( changes, areaname, callback ) {
 	
     updateSyncState(function(){ //just to be sure. Too often there are simultanious events going on
         if( !syncingReady ) { //check if we're at all supposed to be active
-            debug("[handleStorageChange] syncingReady: false. Returning");
+            debug("[handleStorageChange] syncingReady: ", false, ". Returning");
             
             if( callback && typeof( callback ) === "function" ) { callback(); }
             return;
         }
 
         if( !changes.syncTabs ) { //skip if there's no item syncTabs in the changes
-            debug("[handleStorageChange] changes.syncTabs: false. Returning.");
+            debug("[handleStorageChange] changes.syncTabs: ", false, ". Returning.");
             
             if( callback && typeof( callback ) === "function" ) { callback(); }
             return;
@@ -308,13 +309,13 @@ function handleStorageChange( changes, areaname, callback ) {
 
         var syncTabs = changes.syncTabs.newValue.slice(); //storage.onChanged returns the old and new storage values - leight copy the array
         if( !syncTabs ){
-            debug("[handleStorageChange] syncTabs: false. Returning.");
+            debug("[handleStorageChange] syncTabs: ", false, ". Returning.");
             
             if( callback && typeof( callback ) === "function" ) { callback(); }
             return;
         }
 
-        debug("[handleStorageChange] syncTabs: "+syncTabs+" ("+syncTabs.length+")");
+        debug("[handleStorageChange] syncTabs: ", syncTabs, " (", syncTabs.length, ")");
 
         if( !inSyncFunction ){
             inSyncFunction = true;
@@ -343,7 +344,7 @@ function handleStorageChange( changes, areaname, callback ) {
                 });
             });
         }else{ //If another sync function is running
-            debug("[handleStorageChange] inSyncFunction==true. Returning.");
+            debug("[handleStorageChange] inSyncFunction: ", true, ". Returning.");
             
             if( callback && typeof( callback ) === "function" ) { callback(); }
             return;
@@ -357,7 +358,7 @@ function handleStorageChange( changes, areaname, callback ) {
 // Does not remove/readd events for itself , and does not set the inSyncFunction for itself (it's faster(=>safer) to set it outside)
 ///////////////////////////////
 function updateTabsFromStringList( syncTabs, do_merge, callback ) {
-    debug("[updateTabsFromStringList] syncTabs: "+syncTabs+" ("+syncTabs.length+"), do_merge: "+do_merge);
+    debug("[updateTabsFromStringList] syncTabs: ", syncTabs, " (", syncTabs.length, "), do_merge: ", do_merge);
 	
 	diffCurrentToStoredTabs( syncTabs, function( additionalTabs, missingTabs, allCurrentTabs, tabs_count ){
 		if( !allCurrentTabs ){
@@ -365,19 +366,19 @@ function updateTabsFromStringList( syncTabs, do_merge, callback ) {
 			if( callback && typeof( callback ) === "function" ) { callback(); }
 			return;
         }else if( !syncingReady ){ //make a check closest to the actual sync
-            debug("[updateStorageFromTabs_directly] syncingReady: false. Returning.")
+            debug("[updateStorageFromTabs_directly] syncingReady: ", false, ". Returning.")
             if( callback && typeof( callback ) === "function" ) { callback(); }
             return;
         }
 		
         //if there's one removed and one added - we assume it's an update
         if( additionalTabs.length === 1 && missingTabs.length === 1 && !do_merge ) {
-            debug("[updateTabsFromStringList] Updating tab, id: "+missingTabs[0].id);
+            debug("[updateTabsFromStringList] Updating tab, id: ", missingTabs[0].id);
 			chrome.tabs.update( missingTabs[0].id, { url: additionalTabs[0] , active : false } );
 		}else{
 			//Add tabs left in syncTabs (therefore not present)
 			for( var l = 0; l < additionalTabs.length; l++ ) {
-                debug("[updateTabsFromStringList] Creating tab: "+additionalTabs[l]);
+                debug("[updateTabsFromStringList] Creating tab: ", additionalTabs[l]);
 				chrome.tabs.create( { url: additionalTabs[l], active : false } );
 				tabs_count++;
 			}
@@ -386,7 +387,7 @@ function updateTabsFromStringList( syncTabs, do_merge, callback ) {
 				if( missingTabs.length === 1 || Date.now()+time_of_start > 8000 ){ //in the first 8 seconds don't remove more than one tab at a time , because syncing may not be ready yet , and sysnce there's no API to detect that we just wait
 					//Remove tabs left in the local tabs array (not present in sync)
 					for( var lt = 0; lt < missingTabs.length; lt++ ) {
-                        debug("[updateTabsFromStringList] Removing tab: "+missingTabs[lt].url);
+                        debug("[updateTabsFromStringList] Removing tab: ", missingTabs[lt].url);
                         
 						if( tabs_count === 1 ){ //if it's the last tab - just make it blank so chrome doesnt close
 							chrome.tabs.update( missingTabs[lt].id, { url: "chrome://newtab" } );
@@ -411,7 +412,7 @@ function updateStorageFromTabs( callback ) {
 
     updateSyncState(function(){ //just to be sure. Too often there are simultanious events going on
         if( !syncingReady ) {
-            debug("[updateStorageFromTabs] syncingReady: false. Returning.");
+            debug("[updateStorageFromTabs] syncingReady: ", false, ". Returning.");
             if( callback && typeof( callback ) === "function" ) { callback(); }
             return;
         }
@@ -430,7 +431,7 @@ function updateStorageFromTabs( callback ) {
                 if( callback && typeof( callback ) === "function" ) { callback(); }
             });
         }else{
-            debug("[updateStorageFromTabs] inSyncFunction: true. Returning.");
+            debug("[updateStorageFromTabs] inSyncFunction: ", true, ". Returning.");
             if( callback && typeof( callback ) === "function" ) { callback(); }
             return;
         }
@@ -453,7 +454,7 @@ function updateStorageFromTabs_directly( callback ) {
 			syncTabs = new Array();
 		}else{
 			syncTabs = returnVal.syncTabs.slice( 0 ); //returnval is a key:value pair, we need only the value
-            debug("[updateStorageFromTabs_directly] syncTabs: "+syncTabs+" ("+syncTabs.length+")");
+            debug("[updateStorageFromTabs_directly] syncTabs: ", syncTabs, " (", syncTabs.length, ")");
 		}
 			
 		diffCurrentToStoredTabs( syncTabs,function( additionalTabs, missingTabs, currentTabs2 ){
@@ -474,12 +475,12 @@ function updateStorageFromTabs_directly( callback ) {
                         time_of_last_sync_from_current_session = Date.UTC();
                         chrome.storage.sync.set( {"syncTimeStamp" : Date.UTC() } , function() {
                             // Notify that we saved.
-                            debug('[updateStorageFromTabs_directly] tabs saved to sync.',tabsForSync);
+                            debug('[updateStorageFromTabs_directly] tabs saved to sync.', tabsForSync);
                             if( callback && typeof( callback ) === "function" ) { callback(); }
                         });
                     });
                 }else{
-                    debug("[updateStorageFromTabs_directly] syncingReady: false. Returning.")
+                    debug("[updateStorageFromTabs_directly] syncingReady: ", false, ". Returning.")
                     if( callback && typeof( callback ) === "function" ) { callback(); }
                 }
 
@@ -520,7 +521,7 @@ function diffCurrentToStoredTabs( syncTabs, callback ){
 		}else{
 			currentTabs2 = currentTabs.slice(); //copy the array for later
 			tabs_count   = currentTabs.length;
-            debug("[diffCurrentToStoredTabs] currentTabs count: "+currentTabs2.length);
+            debug("[diffCurrentToStoredTabs] currentTabs count: ", currentTabs2.length);
 		}
 	
 		//For all local tabs
@@ -569,12 +570,12 @@ function diffCurrentToStoredTabs( syncTabs, callback ){
 // handle...() --> updateIfAllTabsAreComplete() --> updateStorageFromTabs()
 ///////////////////////////////////////////////
 function handleTabCreated( tab ){
-    debug("[handleTabCreatedEvent] tab.id: "+tab.id);
+    debug("[handleTabCreatedEvent] tab.id: ", tab.id);
 	updateIfAllTabsAreComplete( tab.id );
 }
 
 function handleTabUpdated( tabId, changes ){
-    debug("[handleTabUpdatedEvent] tabId: "+tabId+", changes.status: "+changes.status);
+    debug("[handleTabUpdatedEvent] tabId: ", tabId, ", changes.status: ", changes.status);
 
 	if( changes.status === "complete" ){	
 		updateIfAllTabsAreComplete( tabId );
@@ -584,15 +585,15 @@ function handleTabUpdated( tabId, changes ){
 }
 
 function handleTabRemoved( tabId ){
-    debug("[handleTabRemovedEvent]tabId="+tabId);
+    debug("[handleTabRemovedEvent]tabId=", tabId);
 	updateIfAllTabsAreComplete( tabId );
 }
 
 function updateIfAllTabsAreComplete( tabIdToIgnore ){
-    debug("[updateIfAllTabsAreComplete] tabIdToIgnore: "+tabIdToIgnore);
+    debug("[updateIfAllTabsAreComplete] tabIdToIgnore: ", tabIdToIgnore);
 
     if( inUpdateIfAllTabsAreCompleteFunc ){
-        debug("[updateIfAllTabsAreComplete] inUpdateIfAllTabsAreCompleteFunc: true. Returning.");
+        debug("[updateIfAllTabsAreComplete] inUpdateIfAllTabsAreCompleteFunc: ", true, ". Returning.");
         return;
 	}else{
         inUpdateIfAllTabsAreCompleteFunc = true;
@@ -605,7 +606,7 @@ function updateIfAllTabsAreComplete( tabIdToIgnore ){
 	
 	chrome.tabs.query( query_obj, function( currentTabs ) { //query_obj filters if we want all tabs or only pinned tabs
 		if( !currentTabs ){
-            debug("[updateIfAllTabsAreComplete] currentTabs: false. Returning.");
+            debug("[updateIfAllTabsAreComplete] currentTabs: ", false, ". Returning.");
             
             inUpdateIfAllTabsAreCompleteFunc = false;
 			return;
@@ -755,7 +756,7 @@ function removeListeners(){
 /////////////////////////////////////
 function printSyncTabs( i, callback ){
 	chrome.storage.sync.get( 'syncTabs', function( tt ){
-		debug(Date.now()-time_of_start,":",tt.syncTabs);
+		debug(Date.now()-time_of_start, ":", tt.syncTabs);
 		
 		if( i > 1 ){printSyncTabs( i-1 );}
 		else{if( callback && typeof( callback ) === "function" ) { callback(); }}
