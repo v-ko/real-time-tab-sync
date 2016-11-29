@@ -1,11 +1,32 @@
 <html>
 <head>
 	<title>Real-Time Tab Sync</title>
+	<link rel="stylesheet" type="text/css" href="style.css">
 </head>
 
 <body>
 	<div class="center">
-		<a id="power" href="#">Turn On</a>
+	    <div class="toggle_switch">
+	        <h2>Sync toggle</h2>
+            <span class="vctr">OFF</span>
+            <label class="switch">
+              <input id="power" type="checkbox">
+              <div class="slider round"></div>
+            </label>
+            <span class="vctr">ON</span>
+        </div>
+        
+        <div style="height: 20px;"></div>
+        
+        <div class="toggle_switch">
+            <h2>Tabs to sync</h2>
+            <span class="vctr">PINNED</span>
+            <label class="switch">
+              <input id="pinned" type="checkbox">
+              <div class="slider round"></div>
+            </label>
+            <span class="vctr">ALL</span>
+        </div>
 	</div>
 
 	<script type="text/javascript" src="popup.js"></script>
