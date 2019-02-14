@@ -472,9 +472,13 @@ function updateTabsFromStringList( syncTabs, do_merge, callback ) {
 		}else{
 			//Add tabs left in syncTabs (therefore not present)
 			for( var l = 0; l < additionalTabs.length; l++ ) {
-                debug("[updateTabsFromStringList] Creating tab: ", additionalTabs[l]);
-				chrome.tabs.create( { url: additionalTabs[l], active : false } );
-				tabs_count++;
+                if(additionalTabs[l] && additionalTabs[l]!=="chrome://newtab/"){
+                    debug("[updateTabsFromStringList] Creating tab: ", additionalTabs[l]);
+                    chrome.tabs.create( { url: additionalTabs[l], active : false } );
+                    tabs_count++;
+                }else{
+                    debug("[updateTabsFromStringList] Skipping empty tab found in syncTabs: ",additionalTabs[l]);
+                }
 			}
 		
 			if( !do_merge ){
