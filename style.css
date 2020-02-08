@@ -64,3 +64,21 @@ input:checked + .slider:before {
     vertical-align: top;
     font-size: 13px;
 }
+
+.mini_text {
+  font-size: 9px;
+}
+
+button {
+  background-color: #2196F3;
+  border: none;
+  border-radius: 10px;
+  width: 150px;
+  /*height: 20px;*/
+  color: white;
+  padding: 7px 7px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 13px;
+}

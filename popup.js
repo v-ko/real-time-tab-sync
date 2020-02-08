@@ -53,7 +53,10 @@ window.onload = function(){
 		toggle.onclick = toggleTabs;
 	});
 	
-	
+	var saveTabsButton = document.getElementById("save_tabs_button");
+	var restoreTabsButton = document.getElementById("restore_tabs_button");
+	saveTabsButton.onclick = handleSaveTabsButtonClick
+	restoreTabsButton.onclick = handleRestoreTabsButtonClick
 };
 
 //
@@ -78,6 +81,14 @@ function toggleTabs() {
     }else{
         chrome.extension.sendMessage("syncPinned");
     } 
+}
+
+function handleSaveTabsButtonClick(){
+	chrome.extension.getBackgroundPage().updateStorageFromTabs()
+}
+
+function handleRestoreTabsButtonClick(){
+	chrome.extension.getBackgroundPage().mergeTabsFromSync()
 }
 
 function debug() {
