@@ -76,6 +76,9 @@ getAutoSyncStateFromStore(function(){
     getSyncAllSetting(function(){
         updateNormalWindowPresent(function(){
             updateSyncAllowedState(function(){
+                if ( autoSyncEnabled ){
+                    addSyncTriggerListeners()
+                }
                 updateBrowserIcon();
             });
         });
@@ -96,7 +99,7 @@ chrome.extension.onMessage.addListener( handleMessage );
 //-----------Sync event listeners-----------
 function addSyncTriggerListeners(){
 
-	if( syncTriggerListenersAdded | !autoSyncEnabled){
+	if( syncTriggerListenersAdded ){
         return
 	}
 
@@ -161,12 +164,12 @@ function getSyncAllSetting(callback){
     chrome.storage.local.get( "syncAll", function( data ){
         debug("[Startup] syncAll setting: ", data.syncAll)
 
-        if (!data.syncAllTabs){
+        if (!data.syncAll){
             chrome.storage.local.set({"syncAll": true}, updateSyncAllowedState);
             syncAllTabs = true;
         }
 
-        syncAllTabs = data.syncAllTabs
+        syncAllTabs = data.syncAll
 
         if( callback && typeof( callback ) === "function" ) { callback(autoSyncEnabled); }
     });
@@ -295,7 +298,6 @@ function handleStorageChange( changes, areaname, callback ) {
             updateBrowserIcon();
 
             // Stop tab and windows events while applying changes
-            removeSyncTriggerListeners();
 
             chrome.storage.sync.get( "syncTimeStamp", function( sync_time_stamp ){
                 if( !sync_time_stamp ){
@@ -307,7 +309,6 @@ function handleStorageChange( changes, areaname, callback ) {
                 }
 
                 updateTabsFromStringList( syncTabs, do_merge, function(){
-                    addSyncTriggerListeners();
                     inSyncFunctionLock = false;
                     updateBrowserIcon();
 
@@ -483,9 +484,7 @@ function updateStorageFromTabs( callback ) {
         inSyncFunctionLock = true;
         updateBrowserIcon();
 
-        removeSyncTriggerListeners();
         updateStorageFromTabs_directly( function(){
-            addSyncTriggerListeners();
             inSyncFunctionLock = false;
             updateBrowserIcon();
 

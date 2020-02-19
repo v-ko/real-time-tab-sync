@@ -1,6 +1,6 @@
 {
   "name": "Real-Time Tab Sync",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "manifest_version": 2,
   "description": "Keeps the same tabs on all your machines. Tab changes are applied in real time on all of your devices.",
   "icons": {
