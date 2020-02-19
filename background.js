@@ -74,17 +74,21 @@ debug('-----Starting up-----')
 //========Program startup==============
 getAutoSyncStateFromStore(function(){
     getSyncAllSetting(function(){
-        updateBrowserIcon();
-        updateSyncAllowedState();
+        updateNormalWindowPresent(function(){
+            updateSyncAllowedState(function(){
+                updateBrowserIcon();
+            });
+        });
     });
 });
-
 
 //Default event listeners
 chrome.runtime.onStartup.addListener( handleStartup );
 chrome.runtime.onInstalled.addListener( handleInstalled );
+
 chrome.windows.onCreated.addListener( handleWindowCreated );
 chrome.windows.onRemoved.addListener( handleWindowRemoved );
+
 chrome.extension.onMessage.addListener( handleMessage );
 
 
