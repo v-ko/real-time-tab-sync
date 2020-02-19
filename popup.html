@@ -12,7 +12,6 @@
 
 	    <div class="toggle_switch">
 	        <h2>Auto sync</h2>
-          <div class="mini_text">May be unstable</div>
             <span class="vctr">OFF</span>
             <label class="switch">
               <input id="power" type="checkbox">
@@ -20,9 +19,13 @@
             </label>
             <span class="vctr">ON</span>
         </div>
-        
+
+        <div class="mini_text">May be unstable.</div>
+        <div class="mini_text">Check sync state at:</div>
+        <div class="mini_text">chrome://sync-internals/</div>
+
         <div style="height: 5px;"></div>
-        
+
         <div class="toggle_switch">
             <h2>Tabs to sync</h2>
             <span class="vctr">PINNED</span>
@@ -32,6 +35,8 @@
             </label>
             <span class="vctr">ALL</span>
         </div>
+
+
 	</div>
 
 	<script type="text/javascript" src="popup.js"></script>

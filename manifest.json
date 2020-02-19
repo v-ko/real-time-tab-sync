@@ -1,6 +1,6 @@
 {
   "name": "Real-Time Tab Sync",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "manifest_version": 2,
   "description": "Keeps the same tabs on all your machines. Tab changes are applied in real time on all of your devices.",
   "icons": {
@@ -11,7 +11,7 @@
   "browser_action": {
     "default_icon": {
 	  "19": "icon19grey.png",
-      	  "38": "icon38grey.png" 
+      	  "38": "icon38grey.png"
     },
     "default_title": "Default",
 	"default_popup": "popup.html"
