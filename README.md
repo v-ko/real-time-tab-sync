@@ -1,5 +1,8 @@
 Real-Time Tab Sync
 ==================
+
+**The extension is in maintenance mode!** Only regressions will receive fixes. As I'm enganged in other projects and seldom use it personally any more - feature requests will be frozen until someone volunteers to contribute to their development. I'll be happy to help out anyone who wants to part take.
+
 Keeps the same tabs on all your machines. Tab changes are applied in real time on all of your devices.
 The extension watches for tab changes and synchronizes them in real time across all of your devices that have it enabled. Btw you need to enable synchronization in the Chrome settings.
 
