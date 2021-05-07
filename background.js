@@ -69,6 +69,8 @@ var time_of_last_sync_from_current_session = start_of_current_session;
 
 var doMergeWhenPossible = false;
 
+var tabUpdateTimes = {};  // tab id -> update time
+
 debug('-----Starting up-----')
 
 //========Program startup==============
@@ -282,13 +284,14 @@ function handleStorageChange( changes, areaname, callback ) {
             return;
         }
 
-        var syncTabs = changes.syncTabs.newValue.slice(); //storage.onChanged returns the old and new storage values - leight copy the array
-        if( !syncTabs ){
+        var syncTabs = changes.syncTabs.newValue; //storage.onChanged returns the old and new storage values
+        if( !syncTabs || !syncTabs.slice() ){
             debug("[handleStorageChange] syncTabs: ", false, ". Returning.");
 
             if( callback && typeof( callback ) === "function" ) { callback(); }
             return;
         }
+        syncTabs = syncTabs.slice(); //light copy the array
 
         //commented because it actually bloats the debug log
         //debug("[handleStorageChange] syncTabs: ", syncTabs, " (", syncTabs.length, ")");
@@ -331,6 +334,7 @@ function handleStorageChange( changes, areaname, callback ) {
 //Tabs event handlers
 function handleTabCreated( tab ){
     debug("[handleTabCreatedEvent] tab.id: ", tab.id);
+    tabUpdateTimes[tab.id] = Date.now();
 	updateIfAllTabsAreComplete( tab.id );
 }
 
@@ -346,6 +350,7 @@ function handleTabUpdated( tabId, changes, tab ){
 function handleTabRemoved( tabId ){
     debug("[handleTabRemovedEvent]tabId=", tabId);
 	updateIfAllTabsAreComplete( tabId );
+    delete tabUpdateTimes[tabId];
 }
 
 
@@ -445,14 +450,15 @@ function updateTabsFromStringList( syncTabs, do_merge, callback ) {
 
 			if( !do_merge ){
 			    //in the first 8 seconds don't remove more than one tab at a time , because syncing may not be ready yet , and since there's no API to detect that we just wait
-				if( missingTabs.length === 1 || Date.now()+time_of_start > 8000 ){
+				if( missingTabs.length === 1 || Date.now()-time_of_start > 8000 ){
 					//Remove tabs left in the local tabs array (not present in sync)
 					for( var lt = 0; lt < missingTabs.length; lt++ ) {
                         debug("[updateTabsFromStringList] Removing tab: ", missingTabs[lt].url);
 
 						if( tabs_count === 1 ){ //if it's the last tab - just make it blank so chrome doesnt close
 							chrome.tabs.update( missingTabs[lt].id, { url: "chrome://newtab" } );
-						}else{
+                        //only remove tabs created before last sync
+						}else if( !tabUpdateTimes[missingTabs[lt].id] || tabUpdateTimes[missingTabs[lt].id] < time_of_last_sync_from_current_session ){
 							chrome.tabs.remove( missingTabs[lt].id );
 						}
 					}
@@ -580,30 +586,28 @@ function diffCurrentTabsTo( syncTabs, callback ){
 
 		//For all local tabs
 		for( var t = 0; t < currentTabs.length; t++ ) {
-			if( currentTabs[t].url === "chrome://newtab/" ) { //ignore newtabs
+			var str = currentTabs[t].url;
+            if( !str ||
+                str === "chrome://newtab/" ||  //ignore newtabs
+			    str.slice( 0, 18 ) === "chrome-devtools://" ){ //if the tab is some kind of dev tool - leave it alone
 				currentTabs.splice( t, 1 );
 				tabs_count--;
 				t--;//object is removed => the one in its place is not inspected =>loop with the same index
 				continue;
 			}
-
-			var str = currentTabs[t].url;
-			if( str.slice( 0, 18 ) === "chrome-devtools://" ){ //if the tab is some kind of dev tool - leave it alone
-				currentTabs.splice( t, 1 );
-				tabs_count--;
-				t--;
-				continue;
-			}
+            str = str.substr(0, str.indexOf('#'));  //ignore hashcode
 
 			// For all sync tabs (those in the sync DB)
 			for( var s = 0; s < syncTabs.length; s++ ) {
 				var syncTab = syncTabs[s];
-
-				if( syncTab === currentTabs[t].url ) { //if we find the tab in sync - remove it from the sync and tabs lists
-					syncTabs.splice( s, 1 );
-					currentTabs.splice( t, 1 );
-					t--;
-					break; //start the loop anew
+                if( syncTab ){
+                    syncTab = syncTab.substr(0, syncTab.indexOf('#'));  //ignore hashcode
+				    if( syncTab === str ){ //if we find the tab in sync - remove it from the sync and tabs lists
+					    syncTabs.splice( s, 1 );
+					    currentTabs.splice( t, 1 );
+					    t--;
+					    break; //start the loop anew
+                    }
 				}
 			}//next sync tab
 		}//next local tab
