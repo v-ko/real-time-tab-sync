@@ -5,76 +5,50 @@
  *
 */
 
-var debuggingMode = true;
+const debuggingMode = true;
+var debug = function(){};
+if( debuggingMode ){ debug = chrome.extension.getBackgroundPage().console.log; }
+
 window.onload = function(){
-	// Get the on/off setting and adjust the text link
-	chrome.storage.local.get( "autoSyncEnabled", function( data ){
-		var autoSyncEnabled = true;
+    // Get the on/off setting and adjust the toggle
+    let get = function( storage, name, defValue, elementId, onclick ){
+        storage.get( name, function( data ){
+            let value = defValue;
+            if( data && name in data ){ value = data[name]; }
+            debug( "[popup]", name, ":", value );
 
-		// The setting is set in background.js
-		if( data && data.autoSyncEnabled === false ) {
-			autoSyncEnabled = false;
-		}
+            let toggle = document.getElementById(elementId);
+            toggle.checked = value;
+            toggle.onclick = onclick;
+        });
+    };
 
-		if( debuggingMode ){
-		    debug( "[popup] autoSyncEnabled: ", autoSyncEnabled );
-		}
+    //note: default values must be consistent with background.js.
+    get( chrome.storage.local, "autoSyncEnabled", false, "power", toggleSync );
+    get( chrome.storage.sync, "syncAll", true, "pinned", toggleTabs );
 
-		var toggle = document.getElementById("power");
-
-		if( autoSyncEnabled ) {
-			toggle.checked = true;
-		}else{
-		    toggle.checked = false;
-		}
-
-		// Set action to take when link is clicked
-		toggle.onclick = toggleSync;
-	});
-
-	chrome.storage.sync.get( "syncAll", function( data ){
-	    var syncAll = true;
-	    if( data && data.syncAll === false ){
-	        syncAll = false;
-	    }
-
-	    if( debuggingMode ){
-		    debug( "[popup] syncAll: ", syncAll );
-		}
-
-		var toggle = document.getElementById("pinned");
-
-		if( syncAll ){
-		    toggle.checked = true;
-		}else{
-		    toggle.checked = false;
-		}
-
-		toggle.onclick = toggleTabs;
-	});
-
-	var saveTabsButton = document.getElementById("save_tabs_button");
-	var restoreTabsButton = document.getElementById("restore_tabs_button");
-	saveTabsButton.onclick = handleSaveTabsButtonClick
-	restoreTabsButton.onclick = handleRestoreTabsButtonClick
+    document.getElementById("save_tabs_button").onclick = function(){
+        chrome.extension.sendMessage("saveTabs");
+    };
+    document.getElementById("restore_tabs_button").onclick = function(){
+        chrome.extension.sendMessage("restoreTabs");
+    };
 };
 
-//
 // This will send a message to background.js to turn on or off tab auto sync
-// it will also change the link text
-///////////////////////////////////////
-function toggleSync() {
-	var toggle = document.getElementById("power");
+function toggleSync(){
+    let toggle = document.getElementById("power");
 
-	if( toggle.checked ) {
-		chrome.extension.sendMessage("start");
-	} else {
-		chrome.extension.sendMessage("stop");
-	}
+    if( toggle.checked ) {
+        chrome.extension.sendMessage("start");
+    } else {
+        chrome.extension.sendMessage("stop");
+    }
 }
 
-function toggleTabs() {
-    var toggle  = document.getElementById("pinned");
+// This will send a message to background.js to sync all tabs or only pinned tabs
+function toggleTabs(){
+    let toggle  = document.getElementById("pinned");
 
     if( toggle.checked ){
         chrome.extension.sendMessage("syncAll");
@@ -82,18 +56,3 @@ function toggleTabs() {
         chrome.extension.sendMessage("syncPinned");
     }
 }
-
-function handleSaveTabsButtonClick(){
-	chrome.extension.getBackgroundPage().updateStorageFromTabs()
-}
-
-function handleRestoreTabsButtonClick(){
-	chrome.extension.getBackgroundPage().mergeTabsFromSync()
-}
-
-function debug() {
-    if( debuggingMode ){
-        chrome.extension.getBackgroundPage().console.log.apply( this, arguments );
-    }
-}
-
