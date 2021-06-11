@@ -30,7 +30,7 @@
 
   Tips about the syncing algorithm :
 
-  A perfect syncing is impossible. Instead, we try to achieve the
+  Perfect syncing is impossible. Instead, we try to achieve the
   following goals in our simple syncing algorithm:
 
   - Be extremely cautious and conservative when closing a tab.
@@ -74,7 +74,7 @@
   - time : the timestamp of this record
   - sourceTimes : a dictionary of source -> timestamp mapping to track the latest
                   times that this machine syncs from other machines
-  
+
   ---------------------
 
   Local storage variables :
@@ -307,7 +307,7 @@ function reuseRecycledTab( tab ){
         debug("[reuseRecycledTab] tabId", tab.id, "uses recycled tab:", tabMap[tab.id]);
     }
 }
- 
+
 function getQueryInfo(){
     if( syncAllTabs ){ return {}; }
     return { "pinned": true };
@@ -632,7 +632,7 @@ function initTabsFromRecycled( callback ){
         if( callback && typeof( callback ) === "function" ){ callback(); }
     });
 }
- 
+
 //update syncRecord in storage using current tabs in this machine.
 //if mergeFirst is true, update tabs from syncRecord first.
 function updateStorageFromTabs( mergeFirst, callback ){
@@ -758,7 +758,7 @@ function diffCurrentTabsTo( syncTabs, callback ){
                 if( tabMap[currentTabs[t].id] && tabMap[currentTabs[t].id].originalUrl ){
                     originalUrl = normalizeUrl( tabMap[currentTabs[t].id].originalUrl );
                 }
-    
+
                 // For all sync tabs (those in the sync DB)
                 for( let s = 0; s < additionalTabs.length; s++ ){
                     let syncUrl = normalizeUrl(additionalTabs[s]);
@@ -770,9 +770,9 @@ function diffCurrentTabsTo( syncTabs, callback ){
                     }
                 }//next sync tab
             }//next local tab
-    
+
             missingTabs = currentTabs.slice();
-    
+
             debug("diffCurrentTabsTo() ended: #additionalTabs=", additionalTabs.length, ", #missingTabs=", missingTabs.length);
         }
 
