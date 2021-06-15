@@ -236,7 +236,7 @@ function handleWindowRemoved(){
 
 //-----------Settings getters and setters-----------
 function initSettings(callback){
-    let initVar = function( name, c ){
+    function initVar( name, c ){
         settings[name].storage.get( name, function( data ){
             if( data[name] ){
                 debug("[init]", name, ":", data[name]);
@@ -249,7 +249,7 @@ function initSettings(callback){
         });
     };
 
-    let initVars = function( names, c ){
+    function initVars( names, c ){
         let name = names.shift();
         if( names.length > 0 ){
             initVar( name, function(){
@@ -378,6 +378,7 @@ function processSyncRecordChange( changes, callback ){
 function handleTabCreated( tab ){
     debug("[handleTabCreatedEvent] id:", tab.id, "url:", tab.url, "pending:", tab.pendingUrl, "tab:", tab);
     if( !tab.pendingUrl && tab.status == "unloaded" ){ reuseRecycledTab( tab ); }
+    allTabsHaveCompletedLoading = false;
 }
 
 //here we handle several special cases when a tab updates:
@@ -415,6 +416,20 @@ function processTabLoading( tabId, tab ){
 function processTabComplete( tabId, tab ){
     debug("[processTabComplete] complete - tabId:", tabId, "URL:", tab.url);
     let item = getTabItem( tabId );
+
+    //now that this page is completed, calculate its server-side redirection, if any.
+    if( !item.redirectUrl && item.redirects ){  // client-side redirection takes precedence
+        let url = tab.url;
+        while( url in item.redirects ){
+            url = item.redirects[url];
+        }
+        if( url !== tab.url && !shouldIgnoreUrl( url ) ){
+            debug("[processTabComplete] tracked server-side redirection source for tabId", data.tabId, ":", url);
+            item.redirectUrl = url;
+        }
+    }
+
+    //calculate original url
     if( !item.url ){  // first URL in this tab
         if( !item.originalUrl && item.redirectUrl && !shouldIgnoreUrl(item.redirectUrl) ){
             //no originalUrl previously set; use redirectUrl as its canonical value
@@ -445,6 +460,7 @@ function processTabComplete( tabId, tab ){
     debug("[processTabComplete] tabId:", tabId, "complete with URL:", tab.url, "original:", item.originalUrl);
     delete item.redirectUrl;
     delete item.assumedRedirect;
+    delete item.redirects;
     updateIfAllTabsAreComplete();
 }
 
@@ -468,14 +484,8 @@ function handleTabRemoved( tabId, info ){
 function handleRedirect( data ){
     debug("[handleRedirect] detected server-side redirection: tabId:", data.tabId, data.url, "->", data.redirectUrl);
     let item = getTabItem( data.tabId );
-    if( !item.redirectUrl ){  // this is the first redirection detected and considered
-        if( shouldIgnoreUrl( item.url ) ||                                       // current tab is blank
-            !item.updateTime || Date.now() - item.updateTime > redirectDelay ||  // current tab is irrelevant
-            data.url === item.url || data.url === item.originalUrl ){            // current tab is redirecting
-            debug("[handleRedirect] assume redirect url for tabId", data.tabId, ":", data.url);
-            item.redirectUrl = data.url;
-        }
-    }
+    if( !item.redirects ){ item.redirects = {}; }
+    item.redirects[data.redirectUrl] = data.url;  //dest -> source
 }
 
 
@@ -818,7 +828,7 @@ var runInSync = (function(){
     var queue = [];         // queue of [runnable, callable] to run with sync lock
     var scheduled = false;  // whether a next step has been scheduled
 
-    let step = function(){
+    function step(){
         scheduled = false;
         if( queue.length === 0 ){
             debug("[runInSync] exhausted sync queue");
@@ -841,14 +851,14 @@ var runInSync = (function(){
         }
     };
 
-    let scheduleNext = function(){
+    function scheduleNext(){
         if( !scheduled && queue.length > 0 ){
             scheduled = true;
             setTimeout( step, stepDelay );  // schedule the next step with delay
         }
     }
 
-    let runAndScheduleNext = function( name, runnable, callback ){
+    function runAndScheduleNext( name, runnable, callback ){
         debug("[runInSync] locking for [", name, "]");
         inSyncFunctionLock = true;
         updateBrowserIcon();
@@ -856,7 +866,7 @@ var runInSync = (function(){
         //note: ensure that finalize() is called in all situations so that
         //the lock is released and further steps may be attempted. In finalize(),
         //release lock early; later calls may throw exception.
-        let finalize = function(){
+        function finalize(){
             debug("[runInSync] step done for [", name, "]. remaining:", queue.length);
             inSyncFunctionLock = false;
             updateBrowserIcon();
@@ -885,7 +895,7 @@ var runInSync = (function(){
 //if new data is provided before the scheduled run starts, the new data overwrites
 //the old data, but the scheduled time does not change.
 function scheduleRun( buffer, data, delay, runnable ){
-    let run = function(){
+    function run(){
         if( buffer.data ){
             if( Date.now() - buffer.scheduleTime > delay ){
                 data = buffer.data;
@@ -905,7 +915,7 @@ function scheduleRun( buffer, data, delay, runnable ){
 }
 
 function initPeriodicRun( runnable, interval ){
-    let run = function(){
+    function run(){
         runnable();
         setTimeout( run, interval );
     };
@@ -1027,7 +1037,7 @@ function cleanRecentTabs(){
 }
 
 function cleanRecycle(){
-    let clean = function( dict, key ){
+    function clean( dict, key ){
         if( !dict[key].updateTime || Date.now() - dict[key].updateTime > recycleDuration ){
             delete dict[key];
         }
