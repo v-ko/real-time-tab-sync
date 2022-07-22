@@ -954,24 +954,24 @@ function updateBrowserIcon( callback ){
 
     if( inSyncFunctionLock ){
         if( browserActionIcon !== "yellow" ){
-            chrome.browserAction.setIcon( { "path": {'19': 'icon19yellow.png', '38': 'icon38yellow.png' } } );
+            chrome.browserAction.setIcon( { "path": {'19': 'img/icon19yellow.png', '38': 'img/icon38yellow.png' } } );
             browserActionIcon = "yellow";
         }
     }else if( autoSyncEnabled ){
         if( syncingAllowed ){
             if(browserActionIcon !== "green"){
-                chrome.browserAction.setIcon( { "path": {'19': 'icon19.png', '38': 'icon38.png' } } );
+                chrome.browserAction.setIcon( { "path": {'19': 'img/icon19.png', '38': 'img/icon38.png' } } );
                 browserActionIcon = "green";
             }
         }else{ //syncing is not yet ready
             if( browserActionIcon !== "red" ){
-                chrome.browserAction.setIcon( { "path": {'19': 'icon19red.png', '38': 'icon38red.png' } } );
+                chrome.browserAction.setIcon( { "path": {'19': 'img/icon19red.png', '38': 'img/icon38red.png' } } );
                 browserActionIcon = "red";
             }
         }
     }else{ //user doesn't want sync
         if( browserActionIcon !== "grey" ){
-            chrome.browserAction.setIcon( { "path": {'19': 'icon19grey.png', '38': 'icon38grey.png' } } );
+            chrome.browserAction.setIcon( { "path": {'19': 'img/icon19grey.png', '38': 'img/icon38grey.png' } } );
             browserActionIcon = "grey";
         }
     }
