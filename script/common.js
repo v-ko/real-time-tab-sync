@@ -33,7 +33,7 @@ function printSyncRecord(record) {
     s += `tabs (${record.tabs.length}):\n`;
 	
     for (let i = 0; i < record.tabs.length; i++) {
-		s += `    ${record.tabs[i].url} [${printSource(record.tabs[i].source)}]\n`;
+		s += `    [${printSource(record.tabs[i].source)}] ${record.tabs[i].pinned ? 'pinned' : ''} ${record.tabs[i].url}\n`;
 	}
 	
     return s;
