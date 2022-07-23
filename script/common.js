@@ -39,58 +39,93 @@ function printSyncRecord(record) {
     return s;
 }
 
-//codec copied from https://gist.github.com/mr5z/d3b653ae9b82bb8c4c2501a06f3931c6
-function compressRecord(record) {
-	e = (c) => {
-		(x = "charCodeAt"),
-			(b = z = {}),
-			(f = c.split("")),
-			(d = []),
-			(a = f[0]),
-			(g = 256);
-		for (b = 1; b < f.length; b++)
-			(c = f[b]),
-				null != z[a + c]
-					? (a += c)
-					: (d.push(1 < a.length ? z[a] : a[x](0)),
-					  (z[a + c] = g),
-					  g++,
-					  (a = c));
-		d.push(1 < a.length ? z[a] : a[x](0));
-		for (b = 0; b < d.length; b++) d[b] = String.fromCharCode(d[b]);
-		return d.join("");
-	};
+//------------Compression and decompression------------
 
-	if (!record) {
-		return null;
+function compressRecord(str) {
+	// Build the dictionary.
+	asArray = true;
+	var i,
+		dictionary = {},
+		uncompressed = str,
+		c,
+		wc,
+		w = "",
+		result = [],
+		ASCII = '',
+		dictSize = 256;
+	for (i = 0; i < 256; i += 1) {
+		dictionary[String.fromCharCode(i)] = i;
 	}
-	let uncompressed = JSON.stringify(record);
-	let compressed = e(uncompressed);
-	debug("[compressRecord]", uncompressed.length, "->", compressed.length);
-	return compressed;
-}
 
-function uncompressRecord(compressed) {
-	d = (b) => {
-		(a = e = {}),
-			(d = b.split``),
-			(c = f = d[(b = 0)]),
-			(g = [c]),
-			(h = o = 256);
-		for (; ++b < d.length; f = a)
-			(a = d[b].charCodeAt()),
-				(a = h > a ? d[b] : e[a] || f + c),
-				g.push(a),
-				(c = a[0]),
-				(e[o] = f + c),
-				o++;
-		return g.join``;
-	};
-
-	if (!compressed) {
-		return null;
+	for (i = 0; i < uncompressed.length; i += 1) {
+		c = uncompressed.charAt(i);
+		wc = w + c;
+		//Do not use dictionary[wc] because javascript arrays
+		//will return values for array['pop'], array['push'] etc
+	   // if (dictionary[wc]) {
+		if (dictionary.hasOwnProperty(wc)) {
+			w = wc;
+		} else {
+			result.push(dictionary[w]);
+			ASCII += String.fromCharCode(dictionary[w]);
+			// Add wc to the dictionary.
+			dictionary[wc] = dictSize++;
+			w = String(c);
+		}
 	}
-	let uncompressed = d(compressed);
-	debug("[uncompressRecord]", compressed.length, "->", uncompressed.length);
-	return JSON.parse(uncompressed);
-}
+
+	// Output the code for w.
+	if (w !== "") {
+		result.push(dictionary[w]);
+		ASCII += String.fromCharCode(dictionary[w]);
+	}
+	return asArray ? result : ASCII;
+};
+
+function uncompressRecord(compressedStr) {
+	"use strict";
+	// Build the dictionary.
+	var i, tmp = [],
+		dictionary = [],
+		compressed = compressedStr,
+		w,
+		result,
+		k,
+		entry = "",
+		dictSize = 256;
+	for (i = 0; i < 256; i += 1) {
+		dictionary[i] = String.fromCharCode(i);
+	}
+
+	if(compressed && typeof compressed === 'string') {
+		// convert string into Array.
+		for(i = 0; i < compressed.length; i += 1) {
+			tmp.push(compressed[i].charCodeAt(0));
+		}
+		compressed = tmp;
+		tmp = null;
+	}
+
+	w = String.fromCharCode(compressed[0]);
+	result = w;
+	for (i = 1; i < compressed.length; i += 1) {
+		k = compressed[i];
+		if (dictionary[k]) {
+			entry = dictionary[k];
+		} else {
+			if (k === dictSize) {
+				entry = w + w.charAt(0);
+			} else {
+				return null;
+			}
+		}
+
+		result += entry;
+
+		// Add w+entry[0] to the dictionary.
+		dictionary[dictSize++] = w + entry.charAt(0);
+
+		w = entry;
+	}
+	return result;
+};

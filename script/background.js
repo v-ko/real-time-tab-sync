@@ -1,6 +1,6 @@
 //========Global variables===========
-const startDuration = 8000; //(ms) sync conservatively at startup
-const writeDelay = 5000; //(ms) write storage after a delay from latest update
+const startDuration = 6000; //(ms) sync conservatively at startup
+const writeDelay = 1500; //(ms) write storage after a delay from latest update
 const redirectDelay = 1500; //(ms) consider as redirection if a tab loads twice within short interval
 const stepDelay = 1000; //(ms) delay to run next step in sync
 const recreateDelay = 300 * 1000; //(ms) don't recreate a recently closed URL
@@ -353,7 +353,7 @@ function handleTabCreated(tab) {
 //  often part of authentication, meaning the same originalUrl may result in different urls
 //  in different machines.
 //- When user navigates within the same page, i.e. only hashtag changes, syncing across
-//  machines and closing/creating tabswould be confusing to user.
+//  machines and closing/creating tabs would be confusing to user.
 function handleTabUpdated(tabId, changes, tab) {
 	if (changes.status === "loading") {
 		processTabLoading(tabId, tab);
@@ -363,7 +363,7 @@ function handleTabUpdated(tabId, changes, tab) {
 }
 
 function processTabLoading(tabId, tab) {
-	debug("[processTabLoading] loading - tabId:", tabId, "URL:", tab.url);
+	debug(`[processTabLoading] loading - tabId: ${tabId} URL: ${tab.url}`);
 	let item = getTabItem(tabId);
 	if (!item.redirectUrl) {
 		// client-side redirection may occur now or later
@@ -374,27 +374,17 @@ function processTabLoading(tabId, tab) {
 		) {
 			item.redirectUrl = item.originalUrl;
 			item.assumedRedirect = true;
-			debug(
-				"[processTabLoading] tabId:",
-				tabId,
-				"assumed redirection:",
-				item.redirectUrl
-			);
+			debug(`[processTabLoading] tabId: ${tabId} assumed redirection: ${item.redirectUrl}`);
 		} else {
 			item.redirectUrl = tab.url;
-			debug(
-				"[processTabLoading] tabId:",
-				tabId,
-				"potential redirection:",
-				item.redirectUrl
-			);
+			debug(`[processTabLoading] tabId: ${tabId} potential redirection: ${item.redirectUrl}`);
 		}
 	}
 	allTabsHaveCompletedLoading = false;
 }
 
 function processTabComplete(tabId, tab) {
-	debug("[processTabComplete] complete - tabId:", tabId, "URL:", tab.url);
+	debug(`[processTabComplete] complete - tabId: ${tabId} URL: ${tab.url}`);
 	let item = getTabItem(tabId);
 
 	//now that this page is completed, calculate its server-side redirection, if any.
@@ -405,12 +395,7 @@ function processTabComplete(tabId, tab) {
 			url = item.redirects[url];
 		}
 		if (url !== tab.url && !shouldIgnoreUrl(url)) {
-			debug(
-				"[processTabComplete] tracked server-side redirection source for tabId",
-				data.tabId,
-				":",
-				url
-			);
+			debug(`[processTabComplete] tracked server-side redirection source for tabId ${data.tabId} : ${url}`);
 			item.redirectUrl = url;
 		}
 	}
@@ -418,11 +403,7 @@ function processTabComplete(tabId, tab) {
 	//calculate original url
 	if (!item.url) {
 		// first URL in this tab
-		if (
-			!item.originalUrl &&
-			item.redirectUrl &&
-			!shouldIgnoreUrl(item.redirectUrl)
-		) {
+		if (!item.originalUrl && item.redirectUrl && !shouldIgnoreUrl(item.redirectUrl)) {
 			//no originalUrl previously set; use redirectUrl as its canonical value
 			item.originalUrl = item.redirectUrl;
 		}
@@ -430,34 +411,16 @@ function processTabComplete(tabId, tab) {
 		//tab URL changed from previously observed value
 		if (stripHashTag(item.url) === stripHashTag(tab.url)) {
 			//user is navigating within the same page
-			debug(
-				"[processTabComplete] tabId:",
-				tabId,
-				"ignore plain hashtag change"
-			);
+			debug(`[processTabComplete] tabId: ${tabId} ignore plain hashtag change`);
 			if (!item.originalUrl) {
 				item.originalUrl = item.url; // track navigations within the same page back to one canonical URL
 			}
 		} else if (item.assumedRedirect) {
 			//user navigated to another page
-			debug(
-				"[processTabComplete] tabId:",
-				tabId,
-				"assumed redirection",
-				item.url,
-				"->",
-				tab.url
-			);
+			debug(`[processTabComplete] tabId: ${tabId} assumed redirection ${item.url} -> ${tab.url}`);
 		} else {
 			//user navigated to another page
-			debug(
-				"[processTabComplete] tabId:",
-				tabId,
-				"assumed manual navigation",
-				item.url,
-				"->",
-				tab.url
-			);
+			debug(`[processTabComplete] tabId: ${tabId} assumed manual navigation ${item.url} -> ${tab.url}`);
 			trackRecentTab([item.originalUrl, item.url]); // track the replaced URL
 			delete item.source;
 			if (item.redirectUrl && !shouldIgnoreUrl(item.redirectUrl)) {
@@ -471,14 +434,7 @@ function processTabComplete(tabId, tab) {
 
 	item.updateTime = Date.now();
 	item.url = tab.url;
-	debug(
-		"[processTabComplete] tabId:",
-		tabId,
-		"complete with URL:",
-		tab.url,
-		"original:",
-		item.originalUrl
-	);
+	debug(`[processTabComplete] tabId: ${tabId} complete with URL: ${tab.url} original: ${item.originalUrl}`);
 	delete item.redirectUrl;
 	delete item.assumedRedirect;
 	delete item.redirects;
@@ -486,18 +442,13 @@ function processTabComplete(tabId, tab) {
 }
 
 function handleTabRemoved(tabId, info) {
-	debug(
-		"[handleTabRemovedEvent] tabId:",
-		tabId,
-		"isWindowClosing:",
-		info.isWindowClosing
-	);
+	debug(`[handleTabRemovedEvent] tabId: ${tabId} isWindowClosing: ${info.isWindowClosing}`);
 	if (info.isWindowClosing) {
 		recycleTab(tabMap[tabId]);
 	} else {
 		if (tabId in tabMap) {
 			let item = tabMap[tabId];
-			debug("[handleTabRemovedEvent] tab removed:", item);
+			debug(`[handleTabRemovedEvent] tab removed: ${item}`);
 			if (!item.deleting) {
 				// only track manual deletion
 				trackRecentTab([item.originalUrl, item.redirectUrl, item.url]);
@@ -509,18 +460,12 @@ function handleTabRemoved(tabId, info) {
 }
 
 function handleRedirect(data) {
-	debug(
-		"[handleRedirect] detected server-side redirection: tabId:",
-		data.tabId,
-		data.url,
-		"->",
-		data.redirectUrl
-	);
+	debug(`[handleRedirect] detected server-side redirection: tabId: ${data.tabId,data.url} -> ${data.redirectUrl}`);
 	let item = getTabItem(data.tabId);
 	if (!item.redirects) {
 		item.redirects = {};
 	}
-	item.redirects[data.redirectUrl] = data.url; //dest -> source
+	item.redirects[data.redirectUrl] = data.url; // dest -> source
 }
 
 //-----------Sync functions-----------
@@ -544,20 +489,12 @@ function updateSyncAllowedState(callback) {
 	if (!updateSyncAllowedState.locked) {
 		updateSyncAllowedState.locked = true;
 
-		debug(
-			"[updateSyncAllowedState] normalWindowPresent: ",
-			normalWindowPresent,
-			" (should be true)"
-		);
+		debug(`[updateSyncAllowedState] normalWindowPresent: ${normalWindowPresent} (should be true)`);
 		if (!normalWindowPresent) {
 			//Check for a normal window
 			disallowSyncing();
 		} else {
-			debug(
-				"[updateSyncAllowedState] allTabsHaveCompletedLoading: ",
-				allTabsHaveCompletedLoading,
-				" (should be true)"
-			);
+			debug(`[updateSyncAllowedState] allTabsHaveCompletedLoading: ${allTabsHaveCompletedLoading} (should be true)`);
 			if (allTabsHaveCompletedLoading) {
 				//Check if there are tabs still loading (significant for the initial call only?)
 				allowSyncing();
@@ -612,7 +549,7 @@ function createTabs(tabs) {
 		let url = tabs[l].url;
 		let source = tabs[l].source;
 		if (shouldIgnoreUrl(url)) {
-			debug("[createTabs] Skipping empty tab found in syncRecord:", url);
+			debug(`[createTabs] Skipping empty tab found in syncRecord: ${url}`);
 		} else if (source === machineId) {
 			debug(`[createTabs] Skipping tab originally created in this machine: ${url}`);
 		} else if (recentTabs[url] && now - recentTabs[url] < recreateDelay) {
@@ -656,7 +593,7 @@ function removeTabs(tabs, source, syncTime, tabCount) {
 				item.deleting = true; // mark deletion caused by sync
 				if (--tabCount > 0) {
 					chrome.tabs.remove(tab.id);
-					debug("[removeTabs] Removed tab:", tab.id, tab.url);
+					debug(`[removeTabs] Removed tab: ${tab.id} ${tab.url}`);
 				} else {
 					//it's the last tab - create a new blank tab so chrome doesn't close
 					chrome.tabs.create(
@@ -701,7 +638,7 @@ function saveTabs(callback) {
 }
 
 function restoreTabs(callback) {
-	debug(`[restoreTabs] action triggered`);
+	debug("[restoreTabs] action triggered");
 
 	runInSync("updateStorageFromTabs", callback, function (c) {
 		chrome.storage.sync.get("syncRecord", (data) => {
@@ -726,19 +663,14 @@ function restoreTabs(callback) {
 // note: use syncTabs to calculate whether an update to storage is needed, i.e. whether there is diff to sync
 function updateStorageFromTabsDirectly(device, tabs, callback) {
 	debug(`[updateStorageFromTabsDirectly] comparing with ${tabs.length} tabs from ${device}`);
-
 	diffCurrentTabsTo(
 		tabs,
 		function (additionalTabs, missingTabs, allCurrentTabs) {
 			if (!allCurrentTabs) {
-				debug(
-					"[updateStorageFromTabsDirectly] diffCurrentTabsTo ruturns undefined var-s . Returning."
-				);
+				debug("[updateStorageFromTabsDirectly] diffCurrentTabsTo ruturns undefined var-s . Returning.");
 			} else if (!syncingAllowed) {
 				//make a check closest to the actual sync
-				debug(
-					"[updateStorageFromTabsDirectly] syncingAllowed: false. Returning."
-				);
+				debug("[updateStorageFromTabsDirectly] syncingAllowed: false. Returning.");
 				//if there's no changes - don't write (=>don't invoke a 'storage changed' event)
 			} else if (
 				additionalTabs.length !== 0 ||
@@ -747,9 +679,7 @@ function updateStorageFromTabsDirectly(device, tabs, callback) {
 				writeTabsWithDelay(allCurrentTabs, callback);
 				return;
 			} else {
-				debug(
-					"[updateStorageFromTabsDirectly] No diff in stored and current tabs."
-				);
+				debug("[updateStorageFromTabsDirectly] No diff in stored and current tabs.");
 				if (device != machineId) {
 					//skip sync but need to track timestamp
 					destSyncTimes[device] = Date.now();
@@ -1011,6 +941,7 @@ const runInSync = (function () {
 //if new data is provided before the scheduled run starts, the new data overwrites
 //the old data, but the scheduled time does not change.
 function scheduleRun(buffer, data, delay, runnable) {
+	debug(`[scheduleRun] delay = ${delay}`);
 	function run() {
 		if (buffer.data) {
 			if (Date.now() - buffer.scheduleTime > delay) {
@@ -1027,7 +958,7 @@ function scheduleRun(buffer, data, delay, runnable) {
 		buffer.scheduleTime = Date.now();
 		setTimeout(run, delay);
 	}
-	buffer.data = data; //overwrite purposedly
+	buffer.data = data; //overwrite purposefully
 }
 
 function initPeriodicRun(runnable, interval) {
