@@ -687,7 +687,7 @@ function saveTabs(callback) {
     debug(`[saveTabs] action triggered`);
 
 	runInSync("updateStorageFromTabs", callback, function (c) {
-		chrome.storage.sync.get("syncRecord", function (data) {
+		chrome.storage.sync.get("syncRecord", (data) => {
 			// try to get synced tabs
 			let record = (data && data.syncRecord) ? uncompressRecord(data.syncRecord) : null;
             
@@ -704,9 +704,9 @@ function restoreTabs(callback) {
 	debug(`[restoreTabs] action triggered`);
 
 	runInSync("updateStorageFromTabs", callback, function (c) {
-		let record = (data && data.syncRecord) ? uncompressRecord(data.syncRecord) : null;
+		chrome.storage.sync.get("syncRecord", (data) => {
+			let record = (data && data.syncRecord) ? uncompressRecord(data.syncRecord) : null;
 
-		chrome.storage.sync.get("syncRecord", () => {
 			if (!record || !record.tabs || record.tabs.length === 0) {
 				updateStorageFromTabsDirectly(null, [], c); // if we have just installed the extension
 			} else {
