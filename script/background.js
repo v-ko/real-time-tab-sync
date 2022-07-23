@@ -217,9 +217,8 @@ function setAutoSync(value) {
 }
 
 function recycleTabs(oldTabMap) {
-	for (tabId in oldTabMap) {
+	for (tabId in oldTabMap)
 		recycleTab(oldTabMap[tabId]);
-	}
 }
 
 function recycleTab(item) {
@@ -246,12 +245,7 @@ function reuseRecycledTab(tab) {
 	}
 }
 
-function getQueryInfo() {
-	if (syncAllTabs) {
-		return {};
-	}
-	return { pinned: true };
-}
+const getQueryInfo = () => (syncAllTabs) ? {} : { pinned: true };
 
 //-----------Extension events handlers-----------
 function handleMessage(message) {
@@ -569,7 +563,7 @@ function updateSyncAllowedState(callback) {
 				allowSyncing();
 
 				if (doMergeWhenPossible) {
-					updateStorageFromTabs(true, callback); // TODO: restoreTabs()
+					restoreTabs(callback);
 					doMergeWhenPossible = false;
 				}
 			}
@@ -689,36 +683,7 @@ function initTabsFromRecycled(callback) {
 	});
 }
 
-//update syncRecord in storage using current tabs in this machine.
-//if mergeFirst is true, update tabs from syncRecord first.
-function updateStorageFromTabs(mergeFirst, callback) {
-	debug(`[updateStorageFromTabs] mergeFirst: ${mergeFirst}`);
-
-	runInSync("updateStorageFromTabs", callback, function (c) {
-		chrome.storage.sync.get("syncRecord", function (data) {
-			//get synced tabs
-			let record = (data && data.syncRecord) ? uncompressRecord(data.syncRecord) : null;
-			
-            if (!record || !record.tabs || record.tabs.length === 0) {
-				updateStorageFromTabsDirectly(null, [], c); // if we have just installed the extension
-			} else if (!mergeFirst) {
-				updateStorageFromTabsDirectly(record.machineId, record.tabs, c); // save action
-			} else {
-				//merge tabs; storage will be automatically updated later if needed
-				updateTabsFromRecord(record, c); // restore action
-			}
-		});
-	});
-}
-
-
-
-
-
-
-
-
-function saveTabs(record, callback) {
+function saveTabs(callback) {
     debug(`[saveTabs] action triggered`);
 
 	runInSync("updateStorageFromTabs", callback, function (c) {
@@ -735,10 +700,12 @@ function saveTabs(record, callback) {
 	});
 }
 
-function restoreTabs(record, callback) {
+function restoreTabs(callback) {
 	debug(`[restoreTabs] action triggered`);
 
 	runInSync("updateStorageFromTabs", callback, function (c) {
+		let record = (data && data.syncRecord) ? uncompressRecord(data.syncRecord) : null;
+
 		chrome.storage.sync.get("syncRecord", () => {
 			if (!record || !record.tabs || record.tabs.length === 0) {
 				updateStorageFromTabsDirectly(null, [], c); // if we have just installed the extension
@@ -750,20 +717,18 @@ function restoreTabs(record, callback) {
 	});
 }
 
-
-
-
-
-
-
-
-
+/**
+ * @description	updates sync storage with current device tabs.
+ * @param {string | null} device current device
+ * @param {[]} tabs array of current tabs. each tab is a { url: string, pinned: bool }
+ * @param {function} callback passthrough callback function
+ */
 // note: use syncTabs to calculate whether an update to storage is needed, i.e. whether there is diff to sync
-function updateStorageFromTabsDirectly(source, syncTabs, callback) {
-	debug(`[updateStorageFromTabsDirectly] comparing with ${syncTabs.length} tabs from ${source}`);
+function updateStorageFromTabsDirectly(device, tabs, callback) {
+	debug(`[updateStorageFromTabsDirectly] comparing with ${tabs.length} tabs from ${device}`);
 
 	diffCurrentTabsTo(
-		syncTabs,
+		tabs,
 		function (additionalTabs, missingTabs, allCurrentTabs) {
 			if (!allCurrentTabs) {
 				debug(
@@ -785,9 +750,9 @@ function updateStorageFromTabsDirectly(source, syncTabs, callback) {
 				debug(
 					"[updateStorageFromTabsDirectly] No diff in stored and current tabs."
 				);
-				if (source != machineId) {
+				if (device != machineId) {
 					//skip sync but need to track timestamp
-					destSyncTimes[source] = Date.now();
+					destSyncTimes[device] = Date.now();
 				}
 			}
 			if (callback && typeof callback === "function") {
@@ -797,7 +762,7 @@ function updateStorageFromTabsDirectly(source, syncTabs, callback) {
 	);
 }
 
-//note: throttle writes to storage
+// note: throttle writes to storage
 function writeTabsWithDelay(tabs, callback) {
 	if (!writeTabsWithDelay.buffer) {
 		writeTabsWithDelay.buffer = {};
@@ -856,34 +821,27 @@ function updateRecordWithTab(tab, record) {
     );
 }
 
+// TODO: rewrite me!
 function diffCurrentTabsTo(syncTabs, callback) {
 	debug("[diffCurrentTabsTo]");
 
-	let additionalTabs;
-	if (syncTabs) {
-		additionalTabs = syncTabs.slice();
-	} else {
-		additionalTabs = [];
-	}
+	let additionalTabs = (syncTabs) ? syncTabs.slice() : [];
 	let missingTabs = [];
 	let allCurrentTabs = [];
 
 	// Get current tabs
 	chrome.tabs.query(getQueryInfo(), function (currentTabs) {
-		//debug("[diffCurrentTabsTo] chrome.tabs.query() returned: " + currentTabs);
+		// debug("[diffCurrentTabsTo] chrome.tabs.query() returned: " + currentTabs);
 
 		if (!currentTabs) {
 			debug("Current tabs query returned none");
 		} else if (currentTabs.length === 0) {
 			debug("Current tabs query returned an empty array");
 		} else {
-			allCurrentTabs = currentTabs.slice(); //copy the array for later
-			debug(
-				"[diffCurrentTabsTo] currentTabs count: ",
-				allCurrentTabs.length
-			);
+			allCurrentTabs = currentTabs.slice(); // copy the array for later
+			debug(`[diffCurrentTabsTo] currentTabs count: ${allCurrentTabs.length}`);
 
-			//For all local tabs
+			// For all local tabs
 			for (let t = 0; t < currentTabs.length; t++) {
 				let curUrl = currentTabs[t].url;
 				if (shouldIgnoreUrl(curUrl)) {
@@ -927,7 +885,7 @@ function diffCurrentTabsTo(syncTabs, callback) {
 	});
 }
 
-//note: add delay to detect redirection; this also reduce duplicate calls during syncing.
+// note: add delay to detect redirection; this also reduce duplicate calls during syncing.
 function updateIfAllTabsAreComplete() {
 	debug("[updateIfAllTabsAreComplete]");
 	if (!updateIfAllTabsAreComplete.buffer) {
@@ -938,39 +896,35 @@ function updateIfAllTabsAreComplete() {
 		{},
 		redirectDelay,
 		function (data) {
-			updateIfAllTabsAreCompleteImmediately();
+			debug("[updateIfAllTabsAreCompleteImmediately]");
+
+			chrome.tabs.query(getQueryInfo(), (currentTabs) => {
+				//return if no tabs are found
+				if (!currentTabs) {
+					debug("[updateIfAllTabsAreCompleteImmediately] currentTabs: false. Returning.");
+					return;
+				}
+		
+				//assume all tabs loading is complete
+				allTabsHaveCompletedLoading = true;
+				for (let t = 0; t < currentTabs.length; t++) {
+					// if any tab loading is not completed, return (otherwise there would be overlapping events,
+					// the merging on startup will be overridden , etc.)
+					if (currentTabs[t].status === "loading") {
+						debug(`[updateIfAllTabsAreCompleteImmediately] tab ${currentTabs[t].id} is still loading. Returning.`);
+						allTabsHaveCompletedLoading = false;
+						return;
+					}
+				}
+		
+				//update storage from the current tabs if the function has not yet returned
+				saveTabs();
+		
+				//update the sync state and say the function is no longer running
+				updateSyncAllowedState();
+			});
 		}
 	);
-}
-
-function updateIfAllTabsAreCompleteImmediately() {
-	debug("[updateIfAllTabsAreCompleteImmediately]");
-
-	chrome.tabs.query(getQueryInfo(), (currentTabs) => {
-		//return if no tabs are found
-		if (!currentTabs) {
-			debug("[updateIfAllTabsAreCompleteImmediately] currentTabs: false. Returning.");
-			return;
-		}
-
-		//assume all tabs loading is complete
-		allTabsHaveCompletedLoading = true;
-		for (let t = 0; t < currentTabs.length; t++) {
-			// if any tab loading is not completed, return (otherwise there would be overlapping events,
-			// the merging on startup will be overridden , etc.)
-			if (currentTabs[t].status === "loading") {
-				debug(`[updateIfAllTabsAreCompleteImmediately] tab ${currentTabs[t].id} is still loading. Returning.`);
-				allTabsHaveCompletedLoading = false;
-				return;
-			}
-		}
-
-		//update storage from the current tabs if the function has not yet returned
-		saveTabs();
-
-		//update the sync state and say the function is no longer running
-		updateSyncAllowedState();
-	});
 }
 
 //-----------Schedule functions-----------
@@ -1150,62 +1104,6 @@ function updateBrowserIcon(callback) {
 
 //-----------Helper functions-----------
 
-//codec copied from https://gist.github.com/mr5z/d3b653ae9b82bb8c4c2501a06f3931c6
-function compressRecord(record) {
-	e = (c) => {
-		(x = "charCodeAt"),
-			(b = z = {}),
-			(f = c.split("")),
-			(d = []),
-			(a = f[0]),
-			(g = 256);
-		for (b = 1; b < f.length; b++)
-			(c = f[b]),
-				null != z[a + c]
-					? (a += c)
-					: (d.push(1 < a.length ? z[a] : a[x](0)),
-					  (z[a + c] = g),
-					  g++,
-					  (a = c));
-		d.push(1 < a.length ? z[a] : a[x](0));
-		for (b = 0; b < d.length; b++) d[b] = String.fromCharCode(d[b]);
-		return d.join("");
-	};
-
-	if (!record) {
-		return null;
-	}
-	let uncompressed = JSON.stringify(record);
-	let compressed = e(uncompressed);
-	debug("[compressRecord]", uncompressed.length, "->", compressed.length);
-	return compressed;
-}
-
-function uncompressRecord(compressed) {
-	d = (b) => {
-		(a = e = {}),
-			(d = b.split``),
-			(c = f = d[(b = 0)]),
-			(g = [c]),
-			(h = o = 256);
-		for (; ++b < d.length; f = a)
-			(a = d[b].charCodeAt()),
-				(a = h > a ? d[b] : e[a] || f + c),
-				g.push(a),
-				(c = a[0]),
-				(e[o] = f + c),
-				o++;
-		return g.join``;
-	};
-
-	if (!compressed) {
-		return null;
-	}
-	let uncompressed = d(compressed);
-	debug("[uncompressRecord]", compressed.length, "->", uncompressed.length);
-	return JSON.parse(uncompressed);
-}
-
 //return the last time the issuing machine of the given syncRecord sync from this machine
 function getSyncTime(syncRecord) {
 	let v = 0;
@@ -1214,14 +1112,7 @@ function getSyncTime(syncRecord) {
 	}
 	let t = destSyncTimes[syncRecord.machineId];
 	if (t && v < t) {
-		debug(
-			"[getSyncTime] move syncTime for",
-			syncRecord.machineId,
-			":",
-			printTime(v),
-			"->",
-			printTime(t)
-		);
+		debug(`[getSyncTime] move syncTime for ${syncRecord.machineId} : ${printTime(v)} -> ${printTime(t)}`);
 		v = t;
 	}
 	return v;
@@ -1280,4 +1171,3 @@ function cleanRecycle() {
 		}
 	});
 }
-
