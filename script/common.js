@@ -38,6 +38,3 @@ function printSyncRecord(record) {
 	
     return s;
 }
-
-
-export { normalizeUrl, shouldIgnoreUrl, stripHashTag, printTime, printSyncRecord };

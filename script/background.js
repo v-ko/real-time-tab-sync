@@ -1,5 +1,3 @@
-import { normalizeUrl, shouldIgnoreUrl, stripHashTag, printTime, printSyncRecord } from './common';
-
 //========Global variables===========
 const startDuration = 8000; //(ms) sync conservatively at startup
 const writeDelay = 5000; //(ms) write storage after a delay from latest update
@@ -259,33 +257,26 @@ function getQueryInfo() {
 function handleMessage(message) {
 	debug(`[handleMessage] Message: ${message}`);
 
-    // try to get synced tabs
-    let record = (data && data.syncRecord) ? uncompressRecord(data.syncRecord) : null;
-            
-    if (!record || !record.tabs || record.tabs.length === 0) {
-        updateStorageFromTabsDirectly(null, [], c); // if we have just installed the extension
-    } else {
-        switch (message) {
-            case "start":
-                setSetting("autoSyncEnabled", true, true);
-                break;
-            case "stop":
-                setSetting("autoSyncEnabled", false, true);
-                break;
-            case "syncAll":
-                setSetting("syncAll", true, true);
-                break;
-            case "syncPinned":
-                setSetting("syncAll", false, true);
-                break;
-            case "saveTabs":
-                saveTabs(record);
-                break;
-            case "restoreTabs":
-                restoreTabs(record);
-                break;
-        }
-    }
+	switch (message) {
+		case "start":
+			setSetting("autoSyncEnabled", true, true);
+			break;
+		case "stop":
+			setSetting("autoSyncEnabled", false, true);
+			break;
+		case "syncAll":
+			setSetting("syncAll", true, true);
+			break;
+		case "syncPinned":
+			setSetting("syncAll", false, true);
+			break;
+		case "saveTabs":
+			saveTabs();
+			break;
+		case "restoreTabs":
+			restoreTabs();
+			break;
+	}
 }
 
 function handleStartup() {
@@ -731,8 +722,15 @@ function saveTabs(record, callback) {
     debug(`[saveTabs] action triggered`);
 
 	runInSync("updateStorageFromTabs", callback, function (c) {
-		chrome.storage.sync.get("syncRecord", function () {
-            updateStorageFromTabsDirectly(record.machineId, record.tabs, c); // save action
+		chrome.storage.sync.get("syncRecord", function (data) {
+			// try to get synced tabs
+			let record = (data && data.syncRecord) ? uncompressRecord(data.syncRecord) : null;
+            
+			if (!record || !record.tabs || record.tabs.length === 0) {
+				updateStorageFromTabsDirectly(null, [], c); // if we have just installed the extension
+			} else {
+				updateStorageFromTabsDirectly(record.machineId, record.tabs, c); // save action
+			}
 		});
 	});
 }
@@ -742,8 +740,12 @@ function restoreTabs(record, callback) {
 
 	runInSync("updateStorageFromTabs", callback, function (c) {
 		chrome.storage.sync.get("syncRecord", () => {
-            //merge tabs; storage will be automatically updated later if needed
-            updateTabsFromRecord(record, c);
+			if (!record || !record.tabs || record.tabs.length === 0) {
+				updateStorageFromTabsDirectly(null, [], c); // if we have just installed the extension
+			} else {
+				//merge tabs; storage will be automatically updated later if needed
+				updateTabsFromRecord(record, c);
+			}
 		});
 	});
 }
@@ -964,7 +966,7 @@ function updateIfAllTabsAreCompleteImmediately() {
 		}
 
 		//update storage from the current tabs if the function has not yet returned
-		updateStorageFromTabs(false); // TODO: saveTabs();
+		saveTabs();
 
 		//update the sync state and say the function is no longer running
 		updateSyncAllowedState();
