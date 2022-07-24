@@ -556,7 +556,7 @@ function createTabs(tabs) {
 			debug(`[createTabs] Skipping tab recently closed in this machine: ${url} closed at ${printTime(recentTabs[url])}`);
 		} else {
 			debug(`[createTabs] Creating tab: ${url}`);
-			chrome.tabs.create({ url: url, active: false, pinned: tabs[l].pinned }, function (tab) {
+			chrome.tabs.create({ url: url, active: false, pinned: tabs[l].pinned, groupId: tabs[l].groupId }, function (tab) {
 				debug(`[createTabs] Created tab: ${tab.id} originalUrl: ${url} source: ${source}`);
 				let item = getTabItem(tab.id);
 				item.originalUrl = url;
@@ -657,7 +657,7 @@ function restoreTabs(callback) {
 /**
  * @description	updates sync storage with current device tabs.
  * @param {string | null} device current device
- * @param {[]} tabs array of current tabs. each tab is a { url: string, pinned: bool }
+ * @param {[]} tabs array of current tabs. each tab is a { url: string, pinned: bool, groupId: number }
  * @param {function} callback passthrough callback function
  */
 // note: use syncTabs to calculate whether an update to storage is needed, i.e. whether there is diff to sync
@@ -665,7 +665,7 @@ function updateStorageFromTabsDirectly(device, tabs, callback) {
 	debug(`[updateStorageFromTabsDirectly] comparing with ${tabs.length} tabs from ${device}`);
 	diffCurrentTabsTo(
 		tabs,
-		function (additionalTabs, missingTabs, allCurrentTabs) {
+		(additionalTabs, missingTabs, allCurrentTabs) => {
 			if (!allCurrentTabs) {
 				debug("[updateStorageFromTabsDirectly] diffCurrentTabsTo ruturns undefined var-s . Returning.");
 			} else if (!syncingAllowed) {
@@ -746,7 +746,8 @@ function updateRecordWithTab(tab, record) {
         {
             url: (item.originalUrl) ? item.originalUrl : tab.url,
             pinned: tab.pinned,
-            source: (item.source) ? source = item.source : machineId
+            source: (item.source) ? source = item.source : machineId,
+			groupId: item.groupId
         }
     );
 }
